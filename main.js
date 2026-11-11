@@ -6,6 +6,8 @@ import * as THREE from 'three';
 const LOW_H = 240; // PSX-ish vertical resolution
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'low-power' });
 renderer.setPixelRatio(1);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.BasicShadowMap; // hard, chunky PSX-style shadow edges
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.prepend(renderer.domElement);
 
@@ -221,8 +223,9 @@ screen.position.set(0.12, 0.8, -2.145); scene.add(screen);
 for (let i = 0; i < 4; i++) box(0.16, 0.02, 0.2, lam({ color: [0x203060, 0x602020, 0x206040, 0x111111][i] }), 0.55, 0.51 + i * 0.022, -2.35).rotation.y = rnd(-0.3, 0.3);
 
 // floor lamp
-cyl(0.015, 0.015, 1.4, 5, lam({ color: 0x2a2018 }), -2.3, 0.7, -2.2);
-cyl(0.12, 0.22, 0.25, 8, basic({ color: 0xf2c46a }), -2.3, 1.45, -2.2);
+cyl(0.015, 0.015, 1.4, 5, lam({ color: 0x2a2018 }), -2.3, 0.7, -2.2).userData.noCast = true;
+cyl(0.12, 0.22, 0.25, 8, basic({ color: 0xf2c46a }), -2.3, 1.45, -2.2).userData.noCast = true;
+box(0.004, 0.12, 0.004, lam({ color: 0xc8a040 }), -2.18, 1.28, -2.12).userData.noCast = true; // pull chain
 cyl(0.18, 0.2, 0.03, 8, lam({ color: 0x2a2018 }), -2.3, 0.015, -2.2);
 
 // couch (seen in wide shot)
@@ -543,11 +546,103 @@ box(0.06, 0.012, 0.03, lam({ color: 0x3a3a3e }), -0.04, 0.045, 0, ac);
 scene.add(ac);
 const acGlow = new THREE.PointLight(0xff2a1a, 0.3, 0.7, 1); acGlow.position.set(1.6, 0.6, 0.95); scene.add(acGlow);
 
+// ---------- detail pass 3 ----------
+// ceiling + light fixture
+const ceil = new THREE.Mesh(new THREE.PlaneGeometry(7, 7, 7, 7), lam({ map: stucco('#6e6a78', ['#625e6c', '#7a7684'], [7, 7]) }));
+ceil.rotation.x = Math.PI / 2; ceil.position.set(0, 3, -0.5); ceil.userData.noCast = true; scene.add(ceil);
+cyl(0.25, 0.18, 0.08, 8, lam({ color: 0xd8d0c0 }), 0, 2.96, -0.4).userData.noCast = true;
+
+// smoke detector (blinks) + thermostat
+cyl(0.08, 0.08, 0.035, 8, lam({ color: 0xe8e4dc }), 1.9, 2.98, -1.6).userData.noCast = true;
+const smokeLed = box(0.012, 0.006, 0.012, basic({ color: 0xff2020 }), 1.93, 2.955, -1.58);
+box(0.1, 0.13, 0.025, lam({ color: 0xe0dace }), -2.985, 1.45, 0.6).rotation.y = Math.PI / 2;
+box(0.05, 0.02, 0.005, basic({ color: 0x9aff9a }), -2.97, 1.48, 0.6).rotation.y = Math.PI / 2;
+
+// window sill with empty bottles
+box(0.12, 0.03, 1.4, lam({ color: 0xc8c2bc }), -2.93, 1.03, -1.0);
+const bottle = lam({ color: 0x3a6a2a, emissive: 0x0a1a08 });
+for (const z of [-1.4, -1.32, -0.6]) { cyl(0.025, 0.03, 0.18, 6, bottle, -2.92, 1.135, z); cyl(0.01, 0.015, 0.06, 5, bottle, -2.92, 1.25, z); }
+
+// couch cushions, pillows, throw blanket, remote
+const fab2 = lam({ map: fabric, color: 0xd09080 });
+for (const x of [-0.7, 0, 0.7]) box(0.68, 0.1, 0.78, fab2, x, 0.55, 1.55).rotation.z = rnd(-0.03, 0.03);
+for (const [x, r] of [[-0.85, 0.3], [0.9, -0.25]]) { const pl = box(0.4, 0.34, 0.12, lam({ color: 0x3a4a7a }), x, 0.8, 1.82); pl.rotation.set(-0.3, r, r * 0.5); }
+const plaidTex = canvasTex(32, 32, (g, w, h) => {
+  g.fillStyle = '#2f4a3a'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < w; i += 8) { g.fillStyle = 'rgba(200,170,90,0.6)'; g.fillRect(i, 0, 2, h); g.fillRect(0, i, w, 2); g.fillStyle = 'rgba(120,30,30,0.5)'; g.fillRect(i + 4, 0, 1, h); g.fillRect(0, i + 4, w, 1); }
+});
+const throwGeo = new THREE.PlaneGeometry(0.7, 0.9, 6, 6);
+const tp = throwGeo.attributes.position;
+for (let i = 0; i < tp.count; i++) { const y = tp.getY(i); tp.setZ(i, (y < 0 ? y * y * -1.6 : 0) + rnd(-0.015, 0.015)); }
+throwGeo.computeVertexNormals();
+const blanket = new THREE.Mesh(throwGeo, lam({ map: plaidTex, side: THREE.DoubleSide }));
+blanket.rotation.set(-Math.PI / 2, 0, 0.2); blanket.position.set(1.15, 0.78, 1.45); scene.add(blanket);
+const remote = new THREE.Group(); remote.position.set(0.3, 0.615, 1.4); remote.rotation.y = 0.7;
+box(0.045, 0.018, 0.17, lam({ color: 0x1e1e22 }), 0, 0, 0, remote);
+for (let i = 0; i < 6; i++) box(0.008, 0.004, 0.008, lam({ color: [0xc03030, 0x888888, 0x888888][i % 3] }), -0.01 + (i % 2) * 0.02, 0.011, -0.05 + Math.floor(i / 2) * 0.03, remote);
+scene.add(remote);
+
+// coffee table extras: Bot Guide magazine, lighter, half-eaten battery, receipts
+const guideTex = canvasTex(32, 40, (g, w, h) => {
+  g.fillStyle = '#f0ece0'; g.fillRect(0, 0, w, h); g.fillStyle = '#c0202a'; g.fillRect(2, 2, 28, 9);
+  g.fillStyle = '#fff'; g.font = 'bold 7px Arial'; g.fillText('BOT', 4, 9); g.fillText('GUIDE', 4, 9 + 0); g.fillStyle = '#c0202a'; g.fillRect(2, 2, 28, 9);
+  g.fillStyle = '#fff'; g.fillText('BOT GUIDE', 3, 9);
+  g.fillStyle = '#4fb0b8'; g.fillRect(8, 14, 16, 16); g.fillStyle = '#ffe066'; g.fillRect(12, 19, 2, 2); g.fillRect(18, 19, 2, 2);
+  g.fillStyle = '#222'; g.font = '4px Arial'; g.fillText('10 WAYS TO HIDE', 1, 35); g.fillText('A MESS FAST', 4, 39);
+});
+const mag = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.006, 0.26), [lam({ color: 0xe8e4d8 }), lam({ color: 0xe8e4d8 }), lam({ map: guideTex }), lam({ color: 0xe8e4d8 }), lam({ color: 0xe8e4d8 }), lam({ color: 0xe8e4d8 })]);
+mag.position.set(-0.5, TT + 0.004, -0.08); mag.rotation.y = 0.5; scene.add(mag);
+box(0.02, 0.06, 0.012, lam({ color: 0x9a4ad8 }), 0.27, TT + 0.006, 0.2).rotation.set(Math.PI / 2, 0, 0.9);
+const batt = new THREE.Group(); batt.position.set(-0.05, TT + 0.012, -0.05); batt.rotation.set(0, 0.8, Math.PI / 2);
+cyl(0.012, 0.012, 0.035, 6, lam({ color: 0x1a1a1a }), 0, 0, 0, batt); cyl(0.012, 0.012, 0.012, 6, lam({ color: 0xd8a020 }), 0, 0.023, 0, batt);
+cyl(0.004, 0.004, 0.005, 5, lam({ color: 0xc0c0c0 }), 0, 0.031, 0, batt); scene.add(batt);
+for (let i = 0; i < 3; i++) { const r = box(0.06, 0.002, 0.11, lam({ color: 0xece8de }), rnd(-0.5, 0.5), TT + 0.002 + i * 0.001, rnd(-0.25, 0.28)); r.rotation.y = rnd(0, 6); }
+
+// overflowing trash can + crumpled paper
+cyl(0.16, 0.13, 0.38, 8, lam({ color: 0x5a5e66 }), -1.75, 0.19, 1.1);
+for (let i = 0; i < 4; i++) { const c = can(redVolt, -1.75 + rnd(-0.08, 0.08), 1.1 + rnd(-0.08, 0.08), true); c.position.y = 0.4 + i * 0.03; }
+const paper = lam({ color: 0xe8e4dc });
+for (let i = 0; i < 6; i++) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.035, 0), paper); b.position.set(-1.75 + rnd(-0.5, 0.5), 0.03, 1.1 + rnd(-0.6, 0.2)); b.rotation.set(rnd(0, 6), rnd(0, 6), 0); scene.add(b); }
+
+// power strip behind the stand
+const strip = new THREE.Group(); strip.position.set(0.7, 0.02, -2.68);
+box(0.36, 0.035, 0.07, lam({ color: 0xe8e4dc }), 0, 0, 0, strip);
+box(0.02, 0.01, 0.02, basic({ color: 0xff3020 }), 0.16, 0.022, 0, strip);
+for (let i = 0; i < 4; i++) box(0.035, 0.04, 0.03, lam({ color: 0x18181c }), -0.13 + i * 0.07, 0.035, 0, strip);
+scene.add(strip);
+cable([[0.88, 0.02, -2.68], [1.4, 0.01, -2.5], [2.1, 0.01, -2.6], [2.35, 0.05, -2.7]]);
+
+// robot charging dock in the corner (Unit 7's bed)
+const dockTex = canvasTex(24, 48, (g, w, h) => {
+  g.fillStyle = '#2a2e36'; g.fillRect(0, 0, w, h); g.fillStyle = '#4fb0b8'; g.fillRect(2, 2, 20, 6);
+  g.fillStyle = '#0a0c10'; g.font = 'bold 5px Arial'; g.fillText('UNIT 7', 3, 7);
+  for (let i = 0; i < 5; i++) { g.fillStyle = i < 2 ? '#40ff60' : '#103a18'; g.fillRect(9, 14 + i * 6, 6, 4); }
+  g.fillStyle = '#888'; g.fillRect(4, 44, 16, 1);
+});
+const dock = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.9, 0.06), [lam({ color: 0x2a2e36 }), lam({ color: 0x2a2e36 }), lam({ color: 0x2a2e36 }), lam({ color: 0x2a2e36 }), lam({ map: dockTex, emissive: 0x111418 }), lam({ color: 0x2a2e36 })]);
+dock.position.set(2.45, 0.55, -2.75); scene.add(dock);
+box(0.6, 0.04, 0.5, lam({ color: 0x3a3e46 }), 2.45, 0.02, -2.5);
+const dockGlow = new THREE.PointLight(0x40ff60, 0.5, 1.2, 1); dockGlow.position.set(2.45, 0.6, -2.55); scene.add(dockGlow);
+
+// ---------- shadows ----------
+const noShadow = new Set([floor, back, left, right, rug, cone, screen, win]);
+scene.traverse((o) => {
+  if (!o.isMesh) return;
+  o.receiveShadow = true;
+  let inHand = false; for (let p = o; p; p = p.parent) if (p === hand) inHand = true;
+  o.castShadow = !inHand && !noShadow.has(o) && !o.userData.noCast && !(o.material.transparent);
+  if (inHand) o.receiveShadow = false;
+});
+
 // ---------- lights ----------
 scene.add(new THREE.AmbientLight(0x30305a, 1.3));
 const moon = new THREE.DirectionalLight(0x6a78ff, 0.9); moon.position.set(-6, 3, -1); moon.target.position.set(1, 0, -0.5); scene.add(moon); scene.add(moon.target);
-const lamp = new THREE.PointLight(0xffb060, 3.5, 6, 1); lamp.position.set(-2.2, 1.35, -2.0); scene.add(lamp);
+const lamp = new THREE.PointLight(0xffb060, 4.2, 7, 1); lamp.position.set(-2.3, 1.28, -2.2); scene.add(lamp);
+lamp.castShadow = true; lamp.shadow.mapSize.set(256, 256); lamp.shadow.bias = -0.002; lamp.shadow.normalBias = 0.03; lamp.shadow.camera.near = 0.15;
+moon.castShadow = true; moon.shadow.mapSize.set(512, 512); moon.shadow.bias = -0.0005; moon.shadow.normalBias = 0.03;
+Object.assign(moon.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 0.5, far: 16 });
 const tvLight = new THREE.PointLight(0x60ffd0, 2.2, 4, 1); tvLight.position.set(0.12, 0.85, -1.8); scene.add(tvLight);
+
 const emberLight = new THREE.PointLight(0xff7030, 0.25, 0.6, 1); scene.add(emberLight);
 const head = new THREE.SpotLight(0xfff0d0, 0, 14, 0.28, 0.5, 0.5); head.position.set(-6, 1.3, -1.0); scene.add(head); scene.add(head.target);
 
@@ -642,6 +737,8 @@ function frame() {
     const sc = 0.02 + k * 0.1; p.scale.set(sc, sc, 1);
     p.material.opacity = Math.sin(k * Math.PI) * 0.45;
   }
+
+  smokeLed.visible = (t % 4) < 0.15;
 
   // headlights sweep every ~14s
   const cyc = t % 14;

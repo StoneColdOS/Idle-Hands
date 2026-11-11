@@ -15,8 +15,8 @@ const rt = new THREE.WebGLRenderTarget(320, 240, {
 const snapRes = { value: new THREE.Vector2(160, 120) };
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x07060a);
-scene.fog = new THREE.Fog(0x07060a, 4, 9);
+scene.background = new THREE.Color(0x08070f);
+scene.fog = new THREE.Fog(0x08070f, 4, 9);
 
 const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.03, 30);
 scene.add(camera);
@@ -104,14 +104,15 @@ const tableWood = canvasTex(64, 32, (g, w, h) => {
   for (let i = 0; i < 40; i++) { g.fillStyle = Math.random() < .5 ? '#a07a50' : '#c49a6a'; g.fillRect(0, (Math.random() * h) | 0, w, 1); }
   noise(g, w, h, 120, ['#8e6a44', '#caa577']);
 });
-const paneling = canvasTex(64, 64, (g, w, h) => {
-  g.fillStyle = '#5a3a26'; g.fillRect(0, 0, w, h);
-  for (let x = 0; x < w; x += 8) { g.fillStyle = '#3a2416'; g.fillRect(x, 0, 1, h); g.fillStyle = '#6a4630'; g.fillRect(x + 1, 0, 1, h); }
-  noise(g, w, h, 300, ['#4c3020', '#664330', '#523523']);
-}, [5, 2]);
-const sideWall = canvasTex(32, 32, (g, w, h) => {
-  g.fillStyle = '#6b6550'; g.fillRect(0, 0, w, h); noise(g, w, h, 300, ['#5f5946', '#77705a', '#625c48']);
-}, [4, 2]);
+function stucco(base, specks, rep) {
+  return canvasTex(64, 64, (g, w, h) => {
+    g.fillStyle = base; g.fillRect(0, 0, w, h);
+    noise(g, w, h, 1400, specks);
+    noise(g, w, h, 90, specks, 2);
+  }, rep);
+}
+const paneling = stucco('#8e889a', ['#827c8e', '#9a94a4', '#787284', '#948ea0'], [7, 3]);
+const sideWall = stucco('#8e889a', ['#827c8e', '#9a94a4', '#787284', '#948ea0'], [7, 3]);
 const fabric = canvasTex(32, 32, (g, w, h) => {
   g.fillStyle = '#7a2f22'; g.fillRect(0, 0, w, h); noise(g, w, h, 400, ['#6a281d', '#8a3a2a', '#5e2219', '#93432f']);
 });
@@ -324,7 +325,7 @@ const rug = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.7, 4, 4), lam({ map: r
 rug.rotation.x = -Math.PI / 2; rug.position.set(0, 0.004, 0.1); scene.add(rug);
 
 // baseboards
-const trim = lam({ color: 0x2e1d12 });
+const trim = lam({ color: 0xc8c2bc });
 box(7, 0.1, 0.03, trim, 0, 0.05, -2.78);
 box(0.03, 0.1, 7, trim, -2.98, 0.05, -0.5);
 box(0.03, 0.1, 7, trim, 2.98, 0.05, -0.5);
@@ -442,20 +443,109 @@ for (let i = 0; i < 4; i++) {
   l.position.set(-2.6, 0.55, -0.2); l.rotation.y = (i * Math.PI) / 4; l.rotation.z = rnd(-0.15, 0.15); scene.add(l);
 }
 
-// dust motes floating in the TV light
-const moteGeo = new THREE.BufferGeometry();
-const moteN = 70, motePos = new Float32Array(moteN * 3);
-for (let i = 0; i < moteN; i++) { motePos[i * 3] = rnd(-0.6, 0.8); motePos[i * 3 + 1] = rnd(0.5, 1.6); motePos[i * 3 + 2] = rnd(-2.0, 0.6); }
-moteGeo.setAttribute('position', new THREE.BufferAttribute(motePos, 3));
-const motes = new THREE.Points(moteGeo, new THREE.PointsMaterial({ color: 0xbfe8e0, size: 0.005, transparent: true, opacity: 0.45, depthWrite: false }));
-scene.add(motes);
-
 // lamp light cone on the wall
 const cone = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.7, 1.1, 8, 1, true), basic({ color: 0xffc070, transparent: true, opacity: 0.03, depthWrite: false, side: THREE.DoubleSide }));
 cone.position.set(-2.3, 2.0, -2.2); scene.add(cone);
 
+// ---------- detail pass 2 ----------
+// curtains on the window
+const curtainTex = canvasTex(16, 32, (g, w, h) => {
+  g.fillStyle = '#3a3a6a'; g.fillRect(0, 0, w, h);
+  for (let x = 0; x < w; x += 4) { g.fillStyle = '#2a2a52'; g.fillRect(x, 0, 2, h); }
+  noise(g, w, h, 60, ['#45457a', '#25254a']);
+});
+for (const dz of [-0.75, 0.75]) {
+  const c = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 1.4, 3, 1), lam({ map: curtainTex, side: THREE.DoubleSide }));
+  const cp = c.geometry.attributes.position; for (let i = 0; i < cp.count; i++) cp.setZ(i, Math.sin(cp.getX(i) * 30) * 0.03);
+  c.position.set(-2.93, 1.4, -1.0 + dz); c.rotation.y = Math.PI / 2; scene.add(c);
+}
+cyl(0.012, 0.012, 2.0, 5, lam({ color: 0x2a2a2a }), -2.93, 2.12, -1.0).rotation.x = Math.PI / 2;
+
+// front door on the right wall (the owner comes through here)
+const doorTex = canvasTex(32, 64, (g, w, h) => {
+  g.fillStyle = '#d6d0c4'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#bcb6aa'; for (const [x, y, ww, hh] of [[4, 4, 10, 24], [18, 4, 10, 24], [4, 34, 10, 26], [18, 34, 10, 26]]) { g.fillRect(x, y, ww, hh); g.fillStyle = '#e0dace'; g.fillRect(x + 1, y + 1, ww - 2, hh - 2); g.fillStyle = '#bcb6aa'; }
+  noise(g, w, h, 80, ['#c8c2b6', '#e2dcd0']);
+});
+box(0.06, 2.1, 1.05, lam({ color: 0xc8c2bc }), 2.98, 1.05, 0.1);
+const door = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 2.0), lam({ map: doorTex }));
+door.position.set(2.94, 1.0, 0.1); door.rotation.y = -Math.PI / 2; scene.add(door);
+const brass = lam({ color: 0xc8a040 });
+cyl(0.025, 0.025, 0.05, 6, brass, 2.91, 1.0, 0.45).rotation.z = Math.PI / 2;
+box(0.02, 0.05, 0.035, brass, 2.925, 1.15, 0.45);
+cyl(0.008, 0.008, 0.02, 5, lam({ color: 0x111111 }), 2.93, 1.55, 0.1).rotation.z = Math.PI / 2;
+const matTex = canvasTex(32, 16, (g, w, h) => { g.fillStyle = '#5a4630'; g.fillRect(0, 0, w, h); g.fillStyle = '#2a1e14'; g.font = 'bold 6px Arial'; g.fillText('GO AWAY', 3, 11); noise(g, w, h, 120, ['#4a3a26', '#6a5438']); });
+const mat2 = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.7), lam({ map: matTex }));
+mat2.rotation.set(-Math.PI / 2, 0, Math.PI / 2); mat2.position.set(2.65, 0.005, 0.1); scene.add(mat2);
+// key hooks + light switch by the door
+box(0.02, 0.06, 0.3, darkWood, 2.97, 1.45, -0.65);
+for (let i = 0; i < 3; i++) box(0.04, 0.012, 0.012, brass, 2.95, 1.42, -0.75 + i * 0.1);
+box(0.012, 0.1, 0.06, lam({ color: 0xe8e2d6 }), 2.975, 1.2, -0.55);
+
+// stereo rack next to the TV with glowing displays
+const lcdTex = (txt, col) => canvasTex(32, 8, (g) => { g.fillStyle = '#0a0c14'; g.fillRect(0, 0, 32, 8); g.fillStyle = col; g.font = 'bold 6px monospace'; g.fillText(txt, 2, 6); });
+const rackX = -1.25, rackZ = -2.45;
+box(0.5, 0.75, 0.38, lam({ color: 0x1a1a1e }), rackX, 0.375, rackZ);
+const units = [['TUNER 98.7', '#6ab0ff'], ['CD  03 4:12', '#ff9a40'], ['AMP ||||| ', '#6ab0ff'], ['TAPE A  ', '#9aff9a']];
+units.forEach(([t, c], i) => {
+  const y = 0.12 + i * 0.17;
+  box(0.46, 0.13, 0.02, lam({ color: 0x2a2a30 }), rackX, y, rackZ + 0.19);
+  const d = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.05), basic({ map: lcdTex(t, c) })); d.position.set(rackX - 0.06, y + 0.01, rackZ + 0.202); scene.add(d);
+  cyl(0.025, 0.025, 0.02, 8, lam({ color: 0x55555c }), rackX + 0.15, y, rackZ + 0.205).rotation.x = Math.PI / 2;
+});
+const rackGlow = new THREE.PointLight(0x6a9aff, 0.6, 1.5, 1); rackGlow.position.set(rackX, 0.5, rackZ + 0.5); scene.add(rackGlow);
+
+// wall shelf with CDs, a robot figure and trailing ivy
+box(0.9, 0.03, 0.18, darkWood, -0.55, 1.75, -2.7);
+for (let i = 0; i < 9; i++) box(0.012, 0.13, 0.13, lam({ color: [0x2a4a8a, 0xd8d0c0, 0x8a2a2a, 0x1a1a1a, 0x4a8a5a][i % 5] }), -0.95 + i * 0.016, 1.83, -2.7);
+box(0.06, 0.08, 0.05, lam({ color: 0xc8a040 }), -0.6, 1.805, -2.7);
+box(0.05, 0.05, 0.04, lam({ color: 0xc8a040 }), -0.6, 1.87, -2.7);
+cyl(0.06, 0.045, 0.1, 7, lam({ color: 0xd8d0c0 }), -0.2, 1.815, -2.7);
+const ivyTex = canvasTex(16, 64, (g) => {
+  for (let i = 0; i < 26; i++) { g.fillStyle = ['#2f5a2a', '#3e6e34', '#24461f'][i % 3]; g.beginPath(); g.ellipse(8 + Math.sin(i) * 4, 2 + i * 2.4, 3, 2, i, 0, 7); g.fill(); }
+});
+for (const dx of [-0.25, -0.17, -0.12]) {
+  const v = new THREE.Mesh(new THREE.PlaneGeometry(0.12, rnd(0.5, 0.8)), lam({ map: ivyTex, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }));
+  v.position.set(dx, 1.5, -2.61); scene.add(v);
+}
+
+// calendar
+const calTex = canvasTex(24, 32, (g) => {
+  g.fillStyle = '#eee8dc'; g.fillRect(0, 0, 24, 32); g.fillStyle = '#c0302a'; g.fillRect(0, 0, 24, 12);
+  g.fillStyle = '#fff'; g.font = 'bold 5px Arial'; g.fillText('NOV', 7, 8);
+  g.fillStyle = '#888'; for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) g.fillRect(2 + c * 3.6, 15 + r * 4, 2, 2);
+  g.fillStyle = '#c0302a'; g.fillRect(12, 22, 4, 3);
+});
+const cal = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.32), lam({ map: calTex })); cal.position.set(2.975, 1.4, -0.35); cal.rotation.y = -Math.PI / 2; scene.add(cal);
+
+// laundry pile + sneakers
+const hoodie = new THREE.Mesh(new THREE.IcosahedronGeometry(0.22, 0), lam({ color: 0x4a5a3a })); hoodie.scale.set(1.3, 0.35, 1); hoodie.position.set(1.9, 0.06, -0.6); scene.add(hoodie);
+const shirt = new THREE.Mesh(new THREE.IcosahedronGeometry(0.15, 0), lam({ color: 0x7a2a2a })); shirt.scale.set(1.4, 0.3, 1); shirt.position.set(2.05, 0.1, -0.5); scene.add(shirt);
+for (const [x, z, r] of [[2.4, 0.55, 0.3], [2.5, 0.7, -0.2]]) {
+  const sh = new THREE.Group(); sh.position.set(x, 0, z); sh.rotation.y = r;
+  box(0.1, 0.05, 0.26, lam({ color: 0xe8e4dc }), 0, 0.035, 0, sh); box(0.11, 0.02, 0.28, lam({ color: 0x3a3a40 }), 0, 0.01, 0, sh); box(0.08, 0.04, 0.08, lam({ color: 0xc03030 }), 0, 0.07, 0.07, sh);
+  scene.add(sh);
+}
+
+// alarm clock on the side table (mirrors the HUD time)
+const tclk = canvasTex(48, 20, () => {});
+function drawTableClock(h, m, pm) {
+  const g = tclk.userData.ctx; g.fillStyle = '#0a0606'; g.fillRect(0, 0, 48, 20);
+  g.fillStyle = '#ff2a1a'; g.font = 'bold 13px monospace';
+  g.fillText(`${String(h).padStart(2, ' ')}:${String(m).padStart(2, '0')}`, 3, 15);
+  if (pm) g.fillRect(44, 4, 2, 2);
+  tclk.needsUpdate = true;
+}
+const ac = new THREE.Group(); ac.position.set(1.62, 0.56, 0.82); ac.rotation.y = -0.6;
+box(0.17, 0.08, 0.08, lam({ color: 0x1a1a1c }), 0, 0, 0, ac);
+const acFace = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.055), basic({ map: tclk })); acFace.position.set(0, 0, 0.041); ac.add(acFace);
+box(0.06, 0.012, 0.03, lam({ color: 0x3a3a3e }), -0.04, 0.045, 0, ac);
+scene.add(ac);
+const acGlow = new THREE.PointLight(0xff2a1a, 0.3, 0.7, 1); acGlow.position.set(1.6, 0.6, 0.95); scene.add(acGlow);
+
 // ---------- lights ----------
-scene.add(new THREE.AmbientLight(0x3a3450, 1.4));
+scene.add(new THREE.AmbientLight(0x30305a, 1.3));
+const moon = new THREE.DirectionalLight(0x6a78ff, 0.9); moon.position.set(-6, 3, -1); moon.target.position.set(1, 0, -0.5); scene.add(moon); scene.add(moon.target);
 const lamp = new THREE.PointLight(0xffb060, 3.5, 6, 1); lamp.position.set(-2.2, 1.35, -2.0); scene.add(lamp);
 const tvLight = new THREE.PointLight(0x60ffd0, 2.2, 4, 1); tvLight.position.set(0.12, 0.85, -1.8); scene.add(tvLight);
 const emberLight = new THREE.PointLight(0xff7030, 0.25, 0.6, 1); scene.add(emberLight);
@@ -467,6 +557,7 @@ const shots = [
   { pos: [0.62, 0.6, 0.42], look: [0.06, 0.48, -0.02], hand: false },  // ashtray close-up
   { pos: [2.5, 2.2, 1.9], look: [-0.5, 0.5, -1.0], hand: false },      // wide corner
   { pos: [-0.9, 0.62, -1.2], look: [0.15, 0.8, -2.3], hand: false },   // TV close
+  { pos: [0.2, 1.25, 0.9], look: [2.9, 1.0, 0.0], hand: false },       // front door
 ];
 let shot = 0;
 const lookAt = new THREE.Vector3();
@@ -498,14 +589,29 @@ function pollPad() {
   }
 }
 
-// ---------- clock ----------
-const clockEl = document.getElementById('clock');
+// ---------- clock (90s LED alarm clock) ----------
+const SEG = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgedc', 7: 'abc', 8: 'abcdefg', 9: 'abcfgd' };
+const SEG_PTS = {
+  a: '3,1 17,1 14,4 6,4', b: '18,2 18,17 15,15 15,5', c: '18,19 18,34 15,31 15,21',
+  d: '3,35 17,35 14,32 6,32', e: '2,19 2,34 5,31 5,21', f: '2,2 2,17 5,15 5,5', g: '3,18 6,16 14,16 17,18 14,20 6,20',
+};
+function digitSVG(n, blank) {
+  const on = blank ? '' : SEG[n];
+  return `<svg viewBox="0 0 20 36" class="dg">` + Object.entries(SEG_PTS).map(([k, pts]) =>
+    `<polygon points="${pts}" class="${on.includes(k) ? 'on' : 'off'}"/>`).join('') + `</svg>`;
+}
+const digitsEl = document.getElementById('digits'), pmEl = document.getElementById('pm'), colonEl = document.getElementById('colon');
 let mins = 23 * 60 + 52;
-setInterval(() => {
-  mins = (mins + 1) % (24 * 60);
+function renderClock() {
   const h24 = Math.floor(mins / 60), m = mins % 60, h = h24 % 12 || 12;
-  clockEl.textContent = `${h}:${String(m).padStart(2, '0')} ${h24 < 12 ? 'a.m.' : 'p.m.'}`;
-}, 1500);
+  digitsEl.querySelector('.h').innerHTML = digitSVG(Math.floor(h / 10), h < 10) + digitSVG(h % 10);
+  digitsEl.querySelector('.m').innerHTML = digitSVG(Math.floor(m / 10)) + digitSVG(m % 10);
+  pmEl.classList.toggle('lit', h24 >= 12);
+  drawTableClock(h, m, h24 >= 12);
+}
+setInterval(() => { mins = (mins + 1) % (24 * 60); renderClock(); }, 1500);
+setInterval(() => colonEl.classList.toggle('dim'), 750);
+renderClock();
 
 // ---------- loop ----------
 resize();
@@ -536,11 +642,6 @@ function frame() {
     const sc = 0.02 + k * 0.1; p.scale.set(sc, sc, 1);
     p.material.opacity = Math.sin(k * Math.PI) * 0.45;
   }
-
-  // dust motes drift
-  const mp = moteGeo.attributes.position;
-  for (let i = 0; i < moteN; i++) { let y = mp.getY(i) + dt * 0.02; if (y > 1.7) y = 0.5; mp.setY(i, y); mp.setX(i, mp.getX(i) + Math.sin(t * 0.3 + i) * dt * 0.01); }
-  mp.needsUpdate = true;
 
   // headlights sweep every ~14s
   const cyc = t % 14;

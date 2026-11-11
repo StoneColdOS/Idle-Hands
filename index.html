@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
+<title>Idle Hands</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; }
+  canvas { display: block; width: 100vw; height: 100vh; height: 100dvh; }
+  #clock {
+    position: fixed; left: 6vw; bottom: 9vh; color: #f2f2f2;
+    font: bold clamp(28px, 7vw, 64px) "Times New Roman", Times, serif;
+    text-shadow: 3px 3px 0 #000, -1px -1px 0 #000; letter-spacing: 1px; pointer-events: none;
+  }
+  #hint {
+    position: fixed; right: 4vw; top: calc(env(safe-area-inset-top) + 3vh); color: #cfc8b8;
+    font: 13px ui-monospace, Menlo, monospace; opacity: .85; transition: opacity 1.5s; pointer-events: none;
+    text-shadow: 1px 1px 0 #000;
+  }
+  #tag {
+    position: fixed; left: 4vw; top: calc(env(safe-area-inset-top) + 3vh); color: #8f8a7e;
+    font: 12px ui-monospace, Menlo, monospace; pointer-events: none; text-shadow: 1px 1px 0 #000;
+  }
+</style>
+</head>
+<body>
+<div id="tag">idle hands · style test v0.1</div>
+<div id="hint">tap / A / space: next shot</div>
+<div id="clock">11:52 p.m.</div>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+<script type="module" src="./main.js?v=1"></script>
+</body>
+</html>

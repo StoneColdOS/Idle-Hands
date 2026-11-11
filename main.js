@@ -624,6 +624,87 @@ dock.position.set(2.45, 0.55, -2.75); scene.add(dock);
 box(0.6, 0.04, 0.5, lam({ color: 0x3a3e46 }), 2.45, 0.02, -2.5);
 const dockGlow = new THREE.PointLight(0x40ff60, 0.5, 1.2, 1); dockGlow.position.set(2.45, 0.6, -2.55); scene.add(dockGlow);
 
+// ---------- Unit 7 (placeholder robot) ----------
+const faceTex = canvasTex(32, 24, () => {});
+let faceMood = 'bored';
+function drawFace(mood, blink) {
+  const g = faceTex.userData.ctx;
+  g.fillStyle = '#062a14'; g.fillRect(0, 0, 32, 24);
+  g.fillStyle = '#5aff8a';
+  if (blink) { g.fillRect(6, 11, 7, 1); g.fillRect(19, 11, 7, 1); }
+  else if (mood === 'bored') { g.fillRect(6, 9, 7, 4); g.fillRect(19, 9, 7, 4); g.fillStyle = '#062a14'; g.fillRect(6, 9, 7, 2); g.fillRect(19, 9, 7, 2); g.fillStyle = '#5aff8a'; g.fillRect(5, 8, 9, 1); g.fillRect(18, 8, 9, 1); }
+  else if (mood === 'happy') { for (const x of [6, 19]) { g.fillRect(x, 11, 2, 2); g.fillRect(x + 2, 9, 3, 2); g.fillRect(x + 5, 11, 2, 2); } }
+  else if (mood === 'shock') { g.fillRect(7, 6, 5, 7); g.fillRect(20, 6, 5, 7); g.fillStyle = '#062a14'; g.fillRect(9, 8, 1, 3); g.fillRect(22, 8, 1, 3); g.fillStyle = '#5aff8a'; g.fillRect(14, 17, 4, 4); }
+  if (mood === 'bored' && !blink) g.fillRect(12, 18, 8, 1);
+  if (mood === 'happy') { g.fillRect(11, 17, 10, 1); g.fillRect(10, 16, 1, 1); g.fillRect(21, 16, 1, 1); }
+  for (let y = 0; y < 24; y += 2) { g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(0, y, 32, 1); }
+  faceTex.needsUpdate = true;
+}
+drawFace('bored', false);
+
+const chestTex = canvasTex(32, 32, (g, w, h) => {
+  g.fillStyle = '#4fb0b8'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#3a8a92'; g.fillRect(3, 3, 26, 26);
+  g.fillStyle = '#2a6a72'; for (let y = 6; y < 16; y += 3) g.fillRect(6, y, 20, 1);
+  g.fillStyle = '#0e2a2e'; g.font = 'bold 6px Arial'; g.fillText('UNIT 7', 6, 24);
+  g.fillStyle = '#ffe066'; g.fillRect(24, 25, 3, 2);
+  g.fillStyle = '#e8e2d0'; g.fillRect(4, 27, 3, 1); g.fillRect(4, 4, 1, 1); g.fillRect(27, 4, 1, 1);
+});
+
+const robot = new THREE.Group(); scene.add(robot);
+const rTeal = lam({ color: 0x4fb0b8 }), rTealD = lam({ color: 0x3a8a92 }), rJoint = lam({ color: 0x26262c }), rBeige = lam({ color: 0xcfc6ae }), rBeigeD = lam({ color: 0xa89f88 });
+const RX = 0.0, HIP_Y = 0.68, HIP_Z = 1.62;
+// legs (seated)
+box(0.32, 0.12, 0.24, rJoint, RX, HIP_Y, HIP_Z, robot);
+for (const sx of [-0.1, 0.1]) {
+  box(0.11, 0.11, 0.34, rTeal, RX + sx, HIP_Y, HIP_Z - 0.2, robot);
+  cyl(0.065, 0.065, 0.12, 8, rJoint, RX + sx, HIP_Y, HIP_Z - 0.38, robot).rotation.z = Math.PI / 2;
+  box(0.09, 0.6, 0.09, rTealD, RX + sx, HIP_Y - 0.32, HIP_Z - 0.4, robot);
+  box(0.13, 0.06, 0.2, rJoint, RX + sx, 0.03, HIP_Z - 0.44, robot);
+}
+// upper body pivots at the hip so it can lean/breathe
+const upper = new THREE.Group(); upper.position.set(RX, HIP_Y + 0.04, HIP_Z + 0.04); upper.rotation.x = 0.2; robot.add(upper);
+box(0.38, 0.36, 0.26, rTeal, 0, 0.22, 0, upper);
+const chest = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.28), lam({ map: chestTex })); chest.position.set(0, 0.22, -0.131); chest.rotation.y = Math.PI; upper.add(chest);
+box(0.06, 0.1, 0.18, rTealD, 0, 0.22, 0.16, upper); // backpack battery
+cyl(0.045, 0.05, 0.08, 6, rJoint, 0, 0.44, 0, upper);
+// head: little beige CRT
+const headG = new THREE.Group(); headG.position.set(0, 0.57, 0); headG.rotation.set(-0.08, 0, 0.12); upper.add(headG);
+box(0.3, 0.24, 0.24, rBeige, 0, 0, 0, headG);
+box(0.22, 0.17, 0.12, rBeigeD, 0, 0, 0.17, headG);
+box(0.25, 0.19, 0.01, lam({ color: 0x3a3a36 }), 0, 0.01, -0.121, headG);
+const face = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.165), basic({ map: faceTex })); face.position.set(0, 0.01, -0.127); face.rotation.y = Math.PI; headG.add(face);
+box(0.02, 0.012, 0.01, basic({ color: 0x40ff60 }), 0.11, -0.1, -0.124, headG);
+const ant = cyl(0.006, 0.006, 0.18, 4, rJoint, 0.08, 0.2, 0.04, headG); ant.rotation.z = -0.3;
+const antBulb = box(0.03, 0.03, 0.03, basic({ color: 0xff4a4a }), 0.106, 0.29, 0.04, headG);
+const faceGlow = new THREE.PointLight(0x5aff8a, 0.6, 0.9, 1); faceGlow.position.set(0, 0.0, -0.25); headG.add(faceGlow);
+// arms: shoulder -> elbow -> hand
+function arm(side) {
+  const sh = new THREE.Group(); sh.position.set(side * 0.235, 0.36, 0); upper.add(sh);
+  cyl(0.055, 0.055, 0.08, 8, rJoint, 0, 0, 0, sh).rotation.z = Math.PI / 2;
+  box(0.085, 0.2, 0.085, rTeal, 0, -0.11, 0, sh);
+  const el = new THREE.Group(); el.position.set(0, -0.22, 0); sh.add(el);
+  box(0.075, 0.045, 0.075, rJoint, 0, 0, 0, el);
+  box(0.08, 0.18, 0.08, rTealD, 0, -0.1, 0, el);
+  const hd = new THREE.Group(); hd.position.set(0, -0.21, 0); el.add(hd);
+  box(0.09, 0.05, 0.08, rJoint, 0, 0, 0, hd);
+  for (let i = 0; i < 3; i++) box(0.02, 0.05, 0.02, rTeal, -0.03 + i * 0.03, -0.045, -0.02, hd);
+  box(0.02, 0.04, 0.02, rTeal, side * 0.05, -0.02, 0.01, hd);
+  return { sh, el, hd };
+}
+const armR = arm(1), armL = arm(-1);
+armR.sh.rotation.set(-0.35, 0, 0.15); armR.el.rotation.set(-2.1, 0, 0);
+armL.sh.rotation.set(-0.7, 0, -0.1); armL.el.rotation.set(-0.9, 0, 0.2);
+// cig in right hand
+const rCig = new THREE.Group(); rCig.position.set(0, -0.06, -0.03); rCig.rotation.set(0, 0, Math.PI / 2); armR.hd.add(rCig);
+cyl(0.008, 0.008, 0.09, 5, butt, 0, 0, 0, rCig);
+const rEmber = cyl(0.009, 0.009, 0.008, 5, basic({ color: 0xff6a20 }), 0, -0.048, 0, rCig);
+const robotFill = new THREE.PointLight(0x7aa8d8, 1.4, 2.6, 1); robotFill.position.set(0.1, 1.3, 0.6); scene.add(robotFill);
+// controller in left hand
+const rPad = new THREE.Group(); rPad.position.set(0, -0.07, -0.02); rPad.rotation.set(0.3, 0, 0); armL.hd.add(rPad);
+box(0.13, 0.025, 0.06, padMat, 0, 0, 0, rPad);
+box(0.012, 0.004, 0.012, basic({ color: 0xff4a4a }), 0.04, 0.014, -0.008, rPad);
+
 // ---------- shadows ----------
 const noShadow = new Set([floor, back, left, right, rug, cone, screen, win]);
 scene.traverse((o) => {
@@ -653,12 +734,13 @@ const shots = [
   { pos: [2.5, 2.2, 1.9], look: [-0.5, 0.5, -1.0], hand: false },      // wide corner
   { pos: [-0.9, 0.62, -1.2], look: [0.15, 0.8, -2.3], hand: false },   // TV close
   { pos: [0.2, 1.25, 0.9], look: [2.9, 1.0, 0.0], hand: false },       // front door
+  { orbit: true, look: [0, 0.95, 1.55], hand: false },                  // Unit 7 turntable
 ];
 let shot = 0;
 const lookAt = new THREE.Vector3();
 function setShot(i) {
   shot = (i + shots.length) % shots.length;
-  const s = shots[shot]; camera.position.set(...s.pos); lookAt.set(...s.look); hand.visible = s.hand;
+  const s = shots[shot]; if (s.pos) camera.position.set(...s.pos); lookAt.set(...s.look); hand.visible = s.hand; robot.visible = !s.hand;
 }
 setShot(0);
 
@@ -718,7 +800,10 @@ function frame() {
 
   // handheld-camera breathing
   const s = shots[shot];
-  camera.position.set(s.pos[0] + Math.sin(t * 0.5) * 0.008, s.pos[1] + Math.sin(t * 0.8) * 0.006, s.pos[2]);
+  if (s.orbit) {
+    const a = Math.sin(t * 0.25) * 1.1;
+    camera.position.set(Math.sin(a) * 1.25, 1.15 + Math.sin(t * 0.4) * 0.05, 1.55 - Math.cos(a) * 1.25);
+  } else camera.position.set(s.pos[0] + Math.sin(t * 0.5) * 0.008, s.pos[1] + Math.sin(t * 0.8) * 0.006, s.pos[2]);
   camera.lookAt(lookAt);
   hand.position.y = -0.2 + Math.sin(t * 0.8) * 0.004;
 
@@ -739,6 +824,19 @@ function frame() {
   }
 
   smokeLed.visible = (t % 4) < 0.15;
+
+  // Unit 7 idle: breathe, puff the cig, blink, react to headlights
+  upper.rotation.x = 0.2 + Math.sin(t * 1.1) * 0.012;
+  const puff = Math.max(0, Math.sin((t % 7) / 7 * Math.PI * 2 - 1.2));
+  armR.sh.rotation.x = -0.35 - puff * 0.5; armR.el.rotation.x = -2.1 - puff * 0.35;
+  headG.rotation.z = 0.12 - puff * 0.1;
+  rEmber.material.color.setRGB(1, 0.3 + puff * 0.4, 0.08);
+  antBulb.visible = (t % 2) < 1.6;
+  const lights = (t % 14) < 3;
+  const blink = (t % 4.3) < 0.12;
+  const mood = lights ? 'shock' : ((t % 21) > 18 ? 'happy' : 'bored');
+  const key = mood + blink;
+  if (key !== faceMood) { faceMood = key; drawFace(mood, blink); }
 
   // headlights sweep every ~14s
   const cyc = t % 14;

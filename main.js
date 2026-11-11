@@ -309,6 +309,151 @@ box(0.02, 0.012, 0.02, basic({ color: 0xffe066 }), 0, 0.04, 0.05, hand); // stat
 hand.position.set(0.24, -0.2, -0.42); hand.rotation.set(0.3, 0.5, 0.2);
 camera.add(hand);
 
+// ---------- detail pass ----------
+// rug
+const rugTex = canvasTex(64, 64, (g, w, h) => {
+  g.fillStyle = '#5a1e22'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#1e2a4a'; g.fillRect(4, 4, w - 8, h - 8);
+  g.fillStyle = '#7a2a2a'; g.fillRect(8, 8, w - 16, h - 16);
+  g.fillStyle = '#d8b878';
+  for (let i = 6; i < w - 6; i += 6) { g.fillRect(i, 5, 2, 2); g.fillRect(i, h - 7, 2, 2); g.fillRect(5, i, 2, 2); g.fillRect(w - 7, i, 2, 2); }
+  g.save(); g.translate(32, 32); g.rotate(Math.PI / 4); g.fillStyle = '#1e2a4a'; g.fillRect(-12, -12, 24, 24); g.fillStyle = '#d8b878'; g.fillRect(-5, -5, 10, 10); g.restore();
+  noise(g, w, h, 500, ['#4a181c', '#6a2626', '#1a223a', '#3a1416']);
+});
+const rug = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.7, 4, 4), lam({ map: rugTex }));
+rug.rotation.x = -Math.PI / 2; rug.position.set(0, 0.004, 0.1); scene.add(rug);
+
+// baseboards
+const trim = lam({ color: 0x2e1d12 });
+box(7, 0.1, 0.03, trim, 0, 0.05, -2.78);
+box(0.03, 0.1, 7, trim, -2.98, 0.05, -0.5);
+box(0.03, 0.1, 7, trim, 2.98, 0.05, -0.5);
+
+// wall outlet + framed photo
+box(0.06, 0.1, 0.01, lam({ color: 0xd8d0b8 }), -0.9, 0.3, -2.79);
+const photoTex = canvasTex(32, 24, (g) => {
+  g.fillStyle = '#c8b090'; g.fillRect(0, 0, 32, 24); g.fillStyle = '#7aa0c0'; g.fillRect(0, 0, 32, 12);
+  g.fillStyle = '#3a2a20'; g.fillRect(8, 6, 4, 4); g.fillStyle = '#d8a070'; g.fillRect(8, 10, 4, 1);
+  g.fillStyle = '#5a6a8a'; g.fillRect(7, 11, 6, 9);
+  g.fillStyle = '#4fb0b8'; g.fillRect(19, 9, 6, 5); g.fillRect(18, 14, 8, 6); g.fillStyle = '#ffe066'; g.fillRect(20, 11, 1, 1); g.fillRect(23, 11, 1, 1);
+  g.fillStyle = '#4fb0b8'; g.fillRect(13, 13, 5, 1);
+});
+box(0.42, 0.34, 0.02, lam({ color: 0x2a1a10 }), -1.3, 1.5, -2.785);
+const photo = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.26), lam({ map: photoTex }));
+photo.position.set(-1.3, 1.5, -2.773); scene.add(photo);
+
+// CRT details: vents, front panel, power LED, antenna
+box(0.4, 0.004, 0.25, lam({ color: 0x55585e }), 0.15, 1.057, -2.45);
+box(0.7, 0.07, 0.01, lam({ color: 0x6c7076 }), 0.15, 0.545, -2.148);
+box(0.015, 0.008, 0.005, basic({ color: 0xff3020 }), 0.42, 0.545, -2.142);
+for (const a of [-0.5, 0.45]) { const r = cyl(0.004, 0.004, 0.45, 4, lam({ color: 0xb0b0b8 }), 0.15, 1.25, -2.5); r.rotation.z = a; }
+
+// cables: controller -> console -> TV
+function cable(points, color = 0x18181c) {
+  const curve = new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(...p)));
+  scene.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 16, 0.006, 4), lam({ color })));
+}
+cable([[-0.42, TT + 0.016, 0.16], [-0.55, TT + 0.01, 0.0], [-0.66, 0.35, -0.25], [-0.6, 0.01, -0.9], [-0.45, 0.01, -1.9], [-0.42, 0.52, -2.2]]);
+cable([[-0.1, 0.55, -2.45], [0.0, 0.5, -2.62], [0.1, 0.62, -2.68]], 0x22222a);
+
+// game cases + VHS stack on stand, tower speaker
+function spineTex(bg, fg, text) {
+  return canvasTex(16, 64, (g, w, h) => {
+    g.fillStyle = bg; g.fillRect(0, 0, w, h); g.fillStyle = fg; g.fillRect(0, 0, w, 10);
+    g.save(); g.translate(11, 60); g.rotate(-Math.PI / 2); g.font = 'bold 8px Arial'; g.fillText(text, 0, 0); g.restore();
+  });
+}
+const spines = [
+  spineTex('#1a1a20', '#3a5aa8', 'METAL BOLT'), spineTex('#1a1a20', '#a83a3a', 'CHORE QUEST'),
+  spineTex('#e8e8f0', '#3a3a3a', 'DUST RALLY'), spineTex('#1a1a20', '#3aa860', 'BROOM 64'),
+  spineTex('#2a2a2a', '#d8b040', 'VHS'), spineTex('#2a2a2a', '#d8d8d8', 'VHS'),
+];
+for (let i = 0; i < 5; i++) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.19, 0.14), [lam({ map: spines[i % 4] }), lam({ color: 0x1a1a20 }), lam({ color: 0x1a1a20 }), lam({ color: 0x1a1a20 }), lam({ color: 0x1a1a20 }), lam({ color: 0x1a1a20 })]);
+  m.position.set(-0.62 + i * 0.032, 0.6, -2.5); m.rotation.y = Math.PI / 2; scene.add(m);
+}
+for (let i = 0; i < 3; i++) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.025, 0.1), [lam({ color: 0x111111 }), lam({ color: 0x111111 }), lam({ color: 0x151515 }), lam({ color: 0x111111 }), lam({ map: spines[4 + (i % 2)] }), lam({ color: 0x111111 })]);
+  m.position.set(-0.45, 0.06 + 0.026 * i + 0.25 * 0, -2.12); m.rotation.y = rnd(-0.15, 0.15); m.position.y = 0.013 + i * 0.026; scene.add(m);
+}
+const grille = canvasTex(32, 64, (g, w, h) => {
+  g.fillStyle = '#141416'; g.fillRect(0, 0, w, h);
+  for (const [y, r] of [[18, 11], [46, 13]]) { g.fillStyle = '#2a2a30'; g.beginPath(); g.arc(16, y, r, 0, 7); g.fill(); g.fillStyle = '#0a0a0c'; g.beginPath(); g.arc(16, y, r * 0.45, 0, 7); g.fill(); }
+  g.fillStyle = '#888'; g.font = '5px Arial'; g.fillText('JVB', 11, 6);
+});
+const spk = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.75, 0.3), [lam({ color: 0x1a1a1e }), lam({ color: 0x1a1a1e }), lam({ color: 0x1a1a1e }), lam({ color: 0x1a1a1e }), lam({ map: grille }), lam({ color: 0x1a1a1e })]);
+spk.position.set(1.05, 0.375, -2.45); spk.rotation.y = -0.2; scene.add(spk);
+
+// bookshelf on right wall full of games
+box(0.32, 1.5, 1.0, darkWood, 2.82, 0.75, -1.5);
+for (let s = 0; s < 4; s++) {
+  box(0.3, 0.02, 0.96, lam({ color: 0x5a3a26 }), 2.8, 0.2 + s * 0.36, -1.5);
+  for (let i = 0; i < 14; i++) {
+    if (Math.random() < 0.15) continue;
+    const hgt = rnd(0.17, 0.22);
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.16, hgt, 0.03), [lam({ color: 0x1a1a20 }), lam({ map: spines[(i + s) % 6] }), lam({ color: 0x1a1a20 }), lam({ color: 0x1a1a20 }), lam({ color: 0x1a1a20 }), lam({ color: 0x1a1a20 })]);
+    m.position.set(2.78, 0.21 + s * 0.36 + hgt / 2, -1.92 + i * 0.062); m.rotation.y = Math.PI; m.rotation.x = rnd(-0.08, 0.08); scene.add(m);
+  }
+}
+
+// chip bag: "Byte's Classic RAM"
+const bagTex = canvasTex(32, 48, (g, w, h) => {
+  g.fillStyle = '#e8c030'; g.fillRect(0, 0, w, h); g.fillStyle = '#c0202a'; g.beginPath(); g.arc(16, 18, 11, 0, 7); g.fill();
+  g.fillStyle = '#fff'; g.font = 'bold 8px Arial'; g.fillText("BYTE'S", 2, 21);
+  g.fillStyle = '#1f6b3a'; g.fillRect(8, 32, 16, 8); g.fillStyle = '#111'; g.font = 'bold 5px Arial'; g.fillText('CLASSIC RAM', 1, 46);
+});
+const bagGeo = new THREE.BoxGeometry(0.16, 0.22, 0.05, 2, 3, 1);
+const bp = bagGeo.attributes.position;
+for (let i = 0; i < bp.count; i++) { bp.setZ(i, bp.getZ(i) * (1 - Math.abs(bp.getY(i)) * 3.5) + rnd(-0.008, 0.008)); bp.setX(i, bp.getX(i) + rnd(-0.008, 0.008)); }
+bagGeo.computeVertexNormals();
+const bag = new THREE.Mesh(bagGeo, lam({ map: bagTex }));
+bag.position.set(-0.25, TT + 0.03, -0.24); bag.rotation.set(-Math.PI / 2 + 0.15, 0, 0.6); scene.add(bag);
+for (let i = 0; i < 5; i++) { const c = box(0.028, 0.005, 0.02, chipMat, -0.2 + rnd(-0.08, 0.1), TT + 0.003, -0.15 + rnd(-0.05, 0.08)); c.rotation.y = rnd(0, 6); }
+
+// pizza box on the floor
+const pizzaTex = canvasTex(48, 48, (g, w, h) => {
+  g.fillStyle = '#c8a070'; g.fillRect(0, 0, w, h); noise(g, w, h, 200, ['#b89060', '#d8b080']);
+  g.fillStyle = '#b02020'; g.beginPath(); g.arc(24, 22, 13, 0, 7); g.fill();
+  g.fillStyle = '#fff'; g.font = 'bold 7px Arial'; g.fillText('PIZZA', 13, 25);
+  g.fillStyle = 'rgba(90,50,20,0.5)'; g.beginPath(); g.ellipse(36, 38, 6, 4, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(10, 40, 4, 3, 0, 0, 7); g.fill();
+});
+const pz = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.05, 0.45), [lam({ color: 0xb89060 }), lam({ color: 0xb89060 }), lam({ map: pizzaTex }), lam({ color: 0xa88050 }), lam({ color: 0xb89060 }), lam({ color: 0xb89060 })]);
+pz.position.set(-1.25, 0.025, 0.7); pz.rotation.y = 0.5; scene.add(pz);
+
+// side table with flip phone (owner texts will land here)
+box(0.4, 0.04, 0.4, darkWood, 1.55, 0.5, 0.9);
+box(0.04, 0.48, 0.04, darkWood, 1.55, 0.24, 0.9);
+box(0.3, 0.02, 0.3, darkWood, 1.55, 0.01, 0.9);
+const phone = new THREE.Group(); phone.position.set(1.5, 0.535, 0.88); phone.rotation.y = 0.4;
+box(0.05, 0.012, 0.1, lam({ color: 0x9aa0a8 }), 0, 0, 0, phone);
+box(0.035, 0.002, 0.04, basic({ color: 0x3a6a8a }), 0, 0.007, -0.02, phone);
+scene.add(phone);
+cyl(0.04, 0.035, 0.09, 7, lam({ color: 0xd8d0c0 }), 1.65, 0.565, 0.98); // mug
+
+// plant by the window
+const leafTex = canvasTex(16, 32, (g) => {
+  g.fillStyle = '#2f5a2a'; for (let i = 0; i < 6; i++) { g.beginPath(); g.ellipse(8 + rnd(-3, 3), 4 + i * 5, 4, 3, rnd(-1, 1), 0, 7); g.fill(); }
+  g.fillStyle = '#4a7a3a'; for (let i = 0; i < 4; i++) g.fillRect((rnd(3, 12)) | 0, (rnd(2, 30)) | 0, 2, 2);
+});
+cyl(0.12, 0.09, 0.22, 7, lam({ color: 0x9a4a2a }), -2.6, 0.11, -0.2);
+const leafMat = lam({ map: leafTex, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide });
+for (let i = 0; i < 4; i++) {
+  const l = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.7), leafMat);
+  l.position.set(-2.6, 0.55, -0.2); l.rotation.y = (i * Math.PI) / 4; l.rotation.z = rnd(-0.15, 0.15); scene.add(l);
+}
+
+// dust motes floating in the TV light
+const moteGeo = new THREE.BufferGeometry();
+const moteN = 70, motePos = new Float32Array(moteN * 3);
+for (let i = 0; i < moteN; i++) { motePos[i * 3] = rnd(-0.6, 0.8); motePos[i * 3 + 1] = rnd(0.5, 1.6); motePos[i * 3 + 2] = rnd(-2.0, 0.6); }
+moteGeo.setAttribute('position', new THREE.BufferAttribute(motePos, 3));
+const motes = new THREE.Points(moteGeo, new THREE.PointsMaterial({ color: 0xbfe8e0, size: 0.005, transparent: true, opacity: 0.45, depthWrite: false }));
+scene.add(motes);
+
+// lamp light cone on the wall
+const cone = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.7, 1.1, 8, 1, true), basic({ color: 0xffc070, transparent: true, opacity: 0.03, depthWrite: false, side: THREE.DoubleSide }));
+cone.position.set(-2.3, 2.0, -2.2); scene.add(cone);
+
 // ---------- lights ----------
 scene.add(new THREE.AmbientLight(0x3a3450, 1.4));
 const lamp = new THREE.PointLight(0xffb060, 3.5, 6, 1); lamp.position.set(-2.2, 1.35, -2.0); scene.add(lamp);
@@ -391,6 +536,11 @@ function frame() {
     const sc = 0.02 + k * 0.1; p.scale.set(sc, sc, 1);
     p.material.opacity = Math.sin(k * Math.PI) * 0.45;
   }
+
+  // dust motes drift
+  const mp = moteGeo.attributes.position;
+  for (let i = 0; i < moteN; i++) { let y = mp.getY(i) + dt * 0.02; if (y > 1.7) y = 0.5; mp.setY(i, y); mp.setX(i, mp.getX(i) + Math.sin(t * 0.3 + i) * dt * 0.01); }
+  mp.needsUpdate = true;
 
   // headlights sweep every ~14s
   const cyc = t % 14;

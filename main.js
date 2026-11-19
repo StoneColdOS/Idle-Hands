@@ -239,7 +239,7 @@ wallZ(-2, -2.5, 2.5); wallZ(2, -2.5, 2.5); wallX(-2.5, -2, 2);
 wallX(2.5, -12.5, -0.5); wallX(2.5, 0.5, 2); wallX(2.5, -0.5, 0.5, 2.1, H); // shared wall w/ office door gap
 wallX(4.5, -12.5, 2); wallZ(2, 2.5, 4.5);
 const endWall = [];
-for (const [x1, x2, y1, y2] of [[2.5, 2.8, 0, H], [4.2, 4.5, 0, H], [2.8, 4.2, 0, 0.95], [2.8, 4.2, 2.05, H]]) {
+for (const [x1, x2, y1, y2] of [[2.5, 2.66, 0, H], [4.34, 4.5, 0, H], [2.66, 4.34, 0, 0.8], [2.66, 4.34, 2.3, H]]) {
   const m = box(x2 - x1, y2 - y1, 0.12, cinder(x2 - x1, y2 - y1), (x1 + x2) / 2, (y1 + y2) / 2, -12.5); m.userData.castOutside = true; endWall.push(m);
 }
 
@@ -471,9 +471,9 @@ const wc = cyl(0.2, 0.2, 0.06, 12, lam({ color: 0x1a1a1a }), 4.42, 1.75, 0.0); w
 const wcFace = plane(0.36, 0.36, lam({ map: wallClockTex, transparent: true, alphaTest: 0.5 }), 4.385, 1.75, 0.0, -Math.PI / 2);
 
 // end-of-hall window to the parking lot
-plane(1.4, 1.1, basic({ color: 0x8aa0c8, transparent: true, opacity: 0.025, depthWrite: false }), 3.5, 1.5, -12.5);
-box(1.4, 0.04, 0.2, doorFrame, 3.5, 0.95, -12.48); // sill
-box(1.5, 0.06, 0.08, doorFrame, 3.5, 0.95, -12.42); box(1.5, 0.06, 0.08, doorFrame, 3.5, 2.05, -12.42); box(0.05, 1.1, 0.08, doorFrame, 3.5, 1.5, -12.42);
+plane(1.68, 1.5, basic({ color: 0x8aa0c8, transparent: true, opacity: 0.025, depthWrite: false }), 3.5, 1.55, -12.5);
+box(1.68, 0.04, 0.2, doorFrame, 3.5, 0.8, -12.48); // sill
+box(1.76, 0.06, 0.08, doorFrame, 3.5, 0.8, -12.42); box(1.76, 0.06, 0.08, doorFrame, 3.5, 2.3, -12.42); box(0.05, 1.5, 0.08, doorFrame, 3.5, 1.55, -12.42); box(1.7, 0.04, 0.06, doorFrame, 3.5, 1.55, -12.42);
 
 // fluorescent fixtures in the hall
 const tubeOn = basic({ color: 0xe8f4ff }), tubeOff = lam({ color: 0x6a6a68 });
@@ -678,6 +678,100 @@ for (let i = 0; i < 260; i++) { const a = rnd(-1.2, 1.2), el = rnd(0.12, 1.1), r
 starGeo.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
 scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xc8c8e8, size: 1.6, sizeAttenuation: false, fog: false })));
 
+// ---------- outside detail pass ----------
+const metal = lam({ color: 0x5a5e62 }), rustM = lam({ color: 0x6a4630 });
+// dumpster + bags against the school wall
+const dumpTex = canvasTex(32, 16, (g, w, h) => { g.fillStyle = '#2a4a34'; g.fillRect(0, 0, w, h); noise(g, w, h, 200, ['#22402c', '#34563e', '#5a3a22']); g.fillStyle = 'rgba(110,60,25,0.6)'; g.fillRect(0, 11, w, 5); g.fillStyle = '#d8d0b0'; g.font = 'bold 4px Arial'; g.fillText('NO DUMPING', 6, 8); });
+const dump = new THREE.Group(); dump.position.set(-0.6, 0, -14.3); dump.rotation.y = 0.05; scene.add(dump); dump.userData.outside = true;
+const dm = lam({ map: dumpTex });
+box(2.0, 1.1, 1.2, dm, 0, 0.6, 0, dump); const lidD = box(2.0, 0.06, 1.25, lam({ color: 0x1e3428 }), 0, 1.2, 0.05, dump); lidD.rotation.x = -0.35; lidD.position.y = 1.32;
+for (const x of [-0.8, 0.8]) { const c = cyl(0.08, 0.08, 0.06, 6, tDark, x, 0.08, 0.5, dump); c.rotation.z = E; }
+const bagM = [lam({ color: 0x141416 }), lam({ color: 0x1c1c20 }), lam({ color: 0x6a6a5a })];
+for (let i = 0; i < 5; i++) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(rnd(0.22, 0.32), 0), bagM[i % 3]); b.scale.y = 0.75; b.position.set(rnd(0.3, 1.7), 0.2, rnd(-13.6, -13.9)); b.rotation.set(rnd(0, 3), rnd(0, 3), 0); scene.add(b); b.userData.outside = true; }
+// bike rack (rusty) + one bike frame left behind
+for (let i = 0; i < 4; i++) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.025, 4, 8, Math.PI), rustM); r.position.set(6.4 + i * 0.35, 0.06, -13.4); scene.add(r); r.userData.outside = true; }
+const bike = new THREE.Group(); bike.position.set(6.9, 0, -13.25); bike.rotation.y = 0.1; scene.add(bike); bike.userData.outside = true;
+for (const z of [-0.45, 0.45]) { const w = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.02, 4, 10), tDark); w.position.set(0, 0.32, z); w.rotation.y = E; bike.add(w); }
+box(0.03, 0.03, 0.9, lam({ color: 0x8a2020 }), 0, 0.5, 0, bike); box(0.03, 0.4, 0.03, lam({ color: 0x8a2020 }), 0, 0.5, -0.2, bike).rotation.x = 0.3;
+// cone + puddle with a lamp reflection
+const coneM = lam({ color: 0xe86a1a });
+outside(cyl(0.02, 0.17, 0.5, 6, coneM, 2.6, 0.31, -15.6)); outside(box(0.36, 0.04, 0.36, coneM, 2.6, 0.02, -15.6));
+outside(cyl(0.12, 0.14, 0.06, 6, lam({ color: 0xe8e4dc }), 2.6, 0.38, -15.6));
+const pud = outside(plane(1.6, 0.9, basic({ color: 0x0c0c14, transparent: true, opacity: 0.6, depthWrite: false }), 2.0, 0.008, -18.8)); pud.rotation.x = -E; pud.rotation.z = 0.3;
+const glint = outside(plane(0.35, 0.12, basic({ color: 0xffb060, transparent: true, opacity: 0.5, depthWrite: false }), 1.9, 0.01, -18.7)); glint.rotation.x = -E;
+
+// school marquee sign (lit letters)
+const signTex = canvasTex(64, 24, (g, w, h) => {
+  g.fillStyle = '#0c0c10'; g.fillRect(0, 0, w, h); g.fillStyle = '#e8e4d8'; g.fillRect(2, 2, w - 4, h - 4);
+  g.fillStyle = '#1a1a1a'; g.font = 'bold 5px Arial'; g.fillText('CLOSED FOR', 14, 9); g.fillText('MAINTENANCE', 12, 15);
+  g.fillStyle = '#a81818'; g.fillText('STAY  HOME', 15, 21);
+});
+const sign = new THREE.Group(); sign.position.set(8.2, 0, -19.5); sign.rotation.y = -0.5; scene.add(sign); sign.userData.outside = true;
+box(0.3, 0.9, 0.3, lam({ map: concreteTex }), -1.0, 0.45, 0, sign); box(0.3, 0.9, 0.3, lam({ map: concreteTex }), 1.0, 0.45, 0, sign);
+box(2.5, 0.95, 0.25, lam({ color: 0x3a2a24 }), 0, 1.35, 0, sign);
+const signFace = plane(2.3, 0.85, basic({ map: signTex, color: 0xd8d0c0 }), 0, 1.35, 0.13, 0, sign);
+const schoolNameTex = canvasTex(64, 12, (g) => { g.fillStyle = '#3a2a24'; g.fillRect(0, 0, 64, 12); g.fillStyle = '#d8c070'; g.font = 'bold 6px serif'; g.fillText('WESTVIEW SCHOOL', 6, 9); });
+plane(2.3, 0.35, lam({ map: schoolNameTex }), 0, 2.0, 0.0, 0, sign); box(2.5, 0.42, 0.18, lam({ color: 0x3a2a24 }), 0, 2.0, -0.12, sign);
+const signGlow = new THREE.PointLight(0xe8e0c8, 1.2, 4, 1.5); signGlow.position.set(7.6, 1.4, -18.6); scene.add(signGlow);
+
+// chain-link fence along the back curb
+const fenceTex = canvasTex(16, 16, (g) => { g.strokeStyle = 'rgba(150,150,150,0.9)'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, 0); g.lineTo(16, 16); g.moveTo(16, 0); g.lineTo(0, 16); g.stroke(); });
+const fence = outside(plane(30, 1.8, lam({ map: tiled(fenceTex, 120, 7), transparent: true, alphaTest: 0.3, side: THREE.DoubleSide }), 3, 0.95, -28.0));
+for (let x = -12; x <= 18; x += 3) outside(cyl(0.035, 0.035, 1.95, 5, metal, x, 0.97, -28.0));
+outside(cyl(0.025, 0.025, 30, 4, metal, 3, 1.88, -28.0)).rotation.z = E;
+// gap in the fence where it's been pried open
+const flap = outside(plane(1.2, 1.4, lam({ map: tiled(fenceTex, 5, 6), transparent: true, alphaTest: 0.3, side: THREE.DoubleSide }), 4.6, 0.75, -27.6)); flap.rotation.y = 0.9;
+
+// telephone poles with sagging lines
+const wood = lam({ color: 0x3a2c20 });
+const poles = [[-6, -30.5], [3.2, -31], [12.5, -30.5]];
+for (const [x, z] of poles) { outside(cyl(0.12, 0.15, 7.5, 6, wood, x, 3.75, z)); outside(box(2.0, 0.12, 0.12, wood, x, 6.9, z)); outside(cyl(0.18, 0.18, 0.4, 6, lam({ color: 0x5a5e62 }), x + 0.4, 6.4, z)); }
+for (let i = 0; i < poles.length - 1; i++) for (const off of [-0.8, 0, 0.8]) {
+  const [x1, z1] = poles[i], [x2, z2] = poles[i + 1], mx = (x1 + x2) / 2, mz = (z1 + z2) / 2;
+  cable([[x1 + off, 6.95, z1], [mx + off, 6.1, mz], [x2 + off, 6.95, z2]], 0x0a0a0c, 0.015);
+}
+// a line sagging down toward the school
+cable([[3.2 + 0.8, 6.95, -31], [3.6, 4.8, -22], [3.8, 3.4, -13.0]], 0x0a0a0c, 0.012);
+
+// basketball hoop, flagpole, portable classroom
+const hoop = new THREE.Group(); hoop.position.set(-3.5, 0, -25.2); scene.add(hoop); hoop.userData.outside = true;
+cyl(0.07, 0.08, 3.1, 6, metal, 0, 1.55, 0, hoop); box(1.1, 0.75, 0.05, lam({ color: 0xd8d4c8 }), 0, 3.2, 0.25, hoop);
+const rim = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.015, 4, 10), lam({ color: 0xc84a1a })); rim.rotation.x = E; rim.position.set(0, 2.95, 0.5); hoop.add(rim);
+cyl(0.22, 0.12, 0.35, 8, lam({ color: 0xd8d8d0, transparent: true, opacity: 0.5, wireframe: true }), 0, 2.77, 0.5, hoop);
+outside(cyl(0.04, 0.05, 7.0, 5, lam({ color: 0xa8a8a8 }), 1.2, 3.5, -26.6));
+const flag = outside(plane(0.8, 0.5, lam({ color: 0x5a6a8a, side: THREE.DoubleSide }), 1.6, 5.6, -26.6)); flag.rotation.z = -0.15;
+const flagRope = outside(cyl(0.006, 0.006, 6.5, 3, lam({ color: 0xc8c8c0 }), 1.27, 3.3, -26.6));
+const trailerTex = canvasTex(64, 32, (g, w, h) => {
+  g.fillStyle = '#b8b0a0'; g.fillRect(0, 0, w, h); for (let x = 0; x < w; x += 3) { g.fillStyle = '#a8a090'; g.fillRect(x, 0, 1, h); }
+  noise(g, w, h, 200, ['#9a9282', '#c8c0b0']);
+  g.fillStyle = '#0a0a10'; g.fillRect(8, 9, 10, 8); g.fillRect(40, 9, 10, 8); g.fillStyle = '#5a3a2a'; g.fillRect(26, 9, 7, 18);
+  g.fillStyle = '#e8c070'; g.fillRect(41, 10, 3, 3);
+  g.fillStyle = '#222'; g.font = 'bold 4px Arial'; g.fillText('PORTABLE 4', 22, 6);
+  g.fillStyle = 'rgba(40,30,20,0.5)'; g.fillRect(0, 26, w, 6);
+});
+const trailer = new THREE.Group(); trailer.position.set(12.5, 0, -23.8); trailer.rotation.y = -0.75; scene.add(trailer); trailer.userData.outside = true;
+faced(6, 2.4, 3, lam({ color: 0xa8a090 }), 4, lam({ map: trailerTex }), 0, 1.6, 0).parent = trailer;
+box(6.2, 0.15, 3.2, lam({ color: 0x5a5a5a }), 0, 2.85, 0, trailer);
+box(1.2, 0.4, 0.8, lam({ map: concreteTex }), 0.2, 0.2, 1.9, trailer); // steps
+const trailerLight = new THREE.PointLight(0xe8c070, 0.6, 2.5, 1.5); trailerLight.position.set(10.3, 1.9, -21.0); scene.add(trailerLight);
+
+// second streetlight down the lot, flickering (no shadows)
+outside(cyl(0.08, 0.11, 4.8, 6, pole, 11.5, 2.4, -14.6)); outside(box(0.9, 0.06, 0.06, pole, 11.1, 4.75, -14.6)); outside(box(0.55, 0.14, 0.28, pole, 10.75, 4.7, -14.6));
+const lamp2 = outside(box(0.45, 0.04, 0.22, basic({ color: 0xffd090 }), 10.75, 4.62, -14.6));
+const street2 = new THREE.PointLight(0xffa048, 7, 11, 1.4); street2.position.set(10.75, 4.3, -14.6); scene.add(street2);
+
+// moths around the main lamp
+const moths = Array.from({ length: 7 }, (_, i) => { const m = outside(box(0.03, 0.03, 0.03, basic({ color: 0xffe0b0 }), 1.75, 4.3, -17.5)); m.userData.ph = i * 0.9; m.userData.r = rnd(0.2, 0.55); return m; });
+
+// passing car on the road beyond the trees
+const passer = new THREE.Group(); scene.add(passer);
+for (const dz of [-0.35, 0.35]) passer.add(new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.06), basic({ color: 0xfff4d8 })));
+passer.children[0].position.z = -0.35; passer.children[1].position.z = 0.35;
+const passerLight = new THREE.PointLight(0xfff0d0, 0, 9, 1.2); passer.add(passerLight); passerLight.position.x = 2;
+passer.position.set(-30, 0.6, -33);
+outside(plane(80, 3, lam({ map: tiled(asphaltTex, 20, 1) }), 3, 0.01, -33)).rotation.x = -E;
+for (let x = -36; x < 40; x += 2) outside(box(1, 0.01, 0.08, paint, x, 0.02, -33));
+
 // ---------- lights ----------
 scene.add(new THREE.AmbientLight(0x2a2a52, 1.15));
 const laptopLight = new THREE.PointLight(0x9fd8ff, 1.8, 3.2, 1); laptopLight.position.set(0, 1.05, -1.25); scene.add(laptopLight);
@@ -829,6 +923,14 @@ function frame() {
   // pipe drip falls every ~3s
   const dk = (t % 3) / 3;
   dripDrop.position.y = 2.4 - Math.pow(dk, 2) * 2.4; dripDrop.visible = dk < 0.98;
+
+  // outside life
+  for (const m of moths) { const a = t * 3 + m.userData.ph; m.position.set(1.75 + Math.cos(a) * m.userData.r, 4.2 + Math.sin(a * 1.7) * 0.2, -17.5 + Math.sin(a) * m.userData.r); }
+  const f2 = (t % 6 > 5.3) ? (Math.random() < 0.5 ? 0.05 : 1) : 1;
+  street2.intensity = 7 * f2; lamp2.material.color.setScalar(f2 < 0.5 ? 0.2 : 1);
+  const pc = (t % 22) / 22;
+  if (pc < 0.35) { const k = pc / 0.35; passer.position.x = -30 + k * 66; passerLight.intensity = 5; passer.visible = true; } else { passer.visible = false; passerLight.intensity = 0; }
+  flag.rotation.y = Math.sin(t * 1.3) * 0.25;
 
   // the figure: only there until you walk toward it
   figure.visible = !figureGone;

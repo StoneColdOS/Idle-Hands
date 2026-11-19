@@ -1,11 +1,13 @@
 # Idle Hands
 
-A cozy, tongue-in-cheek PSX-style game about a house robot that slacks off while its owner is out, then scrambles to clean up before they get home.
+A PSX-style horror game about the night-shift sysadmin at a school. Your maintenance window runs 11 p.m. to 6 a.m., and tickets keep coming in from rooms that should be empty.
 
-## Style test v0.1
-One living room scene: low-res render, vertex snapping, dithered 15-bit color, fixed camera shots.
+## After hours v0.6 (style test)
+IT office + B-wing hallway at 3 a.m. Node-based first-person movement.
 
-- Tap / Space / Right arrow / gamepad A or D-pad right: next shot
-- Left arrow / D-pad left: previous shot
+- Up / W / D-pad up / stick up: step forward (when there's a path)
+- Left, Right: turn 90 degrees
+- Down: turn around
+- On iPhone: on-screen arrow pad
 
 Plain HTML + Three.js (vendored in `vendor/`), no build step. Hosted on GitHub Pages.

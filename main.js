@@ -26,10 +26,11 @@ scene.add(camera);
 const postScene = new THREE.Scene();
 const postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 const postMat = new THREE.ShaderMaterial({
-  uniforms: { tDiffuse: { value: rt.texture }, res: { value: new THREE.Vector2(320, 240) }, fade: { value: 1 } },
+  uniforms: { tDiffuse: { value: rt.texture }, res: { value: new THREE.Vector2(320, 240) }, fade: { value: 1 }, time: { value: 0 } },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform vec2 res; uniform float fade; varying vec2 vUv;
+    uniform sampler2D tDiffuse; uniform vec2 res; uniform float fade; uniform float time; varying vec2 vUv;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
     float bayer(vec2 p){
       int x = int(mod(p.x, 4.0)); int y = int(mod(p.y, 4.0)); int i = x + y * 4;
       float m[16] = float[16](0.,8.,2.,10.,12.,4.,14.,6.,3.,11.,1.,9.,15.,7.,13.,5.);
@@ -41,6 +42,7 @@ const postMat = new THREE.ShaderMaterial({
       #include <colorspace_fragment>
       vec2 px = floor(vUv * res);
       vec3 col = gl_FragColor.rgb;
+      col += (hash(px + floor(time * 24.0) * vec2(17.0, 31.0)) - 0.5) * 0.055;
       col = floor(col * 31.0 + 0.5 + bayer(px) * 1.2) / 31.0;
       vec2 d = vUv - 0.5; col *= 1.0 - dot(d, d) * 1.1;
       col *= 0.94 + 0.06 * mod(px.y, 2.0);
@@ -111,14 +113,22 @@ function lcdTex(txt, col, w = 48) {
 }
 
 // ---------- textures ----------
-const cinderTex = canvasTex(64, 64, (g, w, h) => {
-  g.fillStyle = '#cfc6a8'; g.fillRect(0, 0, w, h);
-  noise(g, w, h, 900, ['#c2b99c', '#d8d0b4', '#bab196', '#c8bfa2']);
-  g.fillStyle = '#9a9278';
-  for (let r = 0; r < 4; r++) {
+const cinderTex = canvasTex(128, 128, (g, w, h) => {
+  g.fillStyle = '#cbc2a4'; g.fillRect(0, 0, w, h);
+  noise(g, w, h, 3600, ['#bfb69a', '#d6ceb2', '#b4ab90', '#c6bda0']);
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 5; c++) {
+    if (Math.random() < 0.18) { g.fillStyle = `rgba(90,70,40,${rnd(0.06, 0.16)})`; g.fillRect(c * 32 - (r % 2) * 16, r * 16, 32, 16); }
+  }
+  g.fillStyle = '#8e866c';
+  for (let r = 0; r < 8; r++) {
     g.fillRect(0, r * 16, w, 1);
     const off = (r % 2) * 16;
     for (let x = off; x < w + 32; x += 32) g.fillRect(x % w, r * 16, 1, 16);
+  }
+  for (let i = 0; i < 14; i++) { g.fillStyle = Math.random() < 0.5 ? '#e2dac0' : '#9a9278'; g.fillRect((rnd(0, w)) | 0, (rnd(0, h)) | 0, (rnd(1, 4)) | 0, (rnd(1, 3)) | 0); }
+  for (let i = 0; i < 3; i++) {
+    const x = rnd(0, w), y = rnd(0, h * 0.5);
+    for (let k = 0; k < 30; k++) { g.fillStyle = `rgba(100,70,30,${0.12 - k * 0.003})`; g.fillRect(x + rnd(-1, 1), y + k, 2, 1); }
   }
 });
 const carpetTex = canvasTex(32, 32, (g, w, h) => {
@@ -130,22 +140,34 @@ const vctTex = canvasTex(64, 64, (g, w, h) => {
     g.fillStyle = (x + y) % 2 ? '#c8c2ae' : '#9a9e94'; g.fillRect(x * 16, y * 16, 16, 16);
   }
   noise(g, w, h, 500, ['#b0aa98', '#d8d2c0', '#8a8e84', '#a8a090']);
-  g.fillStyle = 'rgba(40,36,30,0.35)'; for (let i = 0; i < 64; i += 16) { g.fillRect(i, 0, 1, h); g.fillRect(0, i, w, 1); }
+  if (Math.random() < 1) { g.fillStyle = 'rgba(160,130,60,0.35)'; g.fillRect(16, 32, 16, 16); }
+  g.fillStyle = 'rgba(30,26,20,0.5)'; for (let i = 0; i < 64; i += 16) { g.fillRect(i, 0, 1, h); g.fillRect(0, i, w, 1); }
+  g.fillStyle = 'rgba(30,26,20,0.25)'; for (let i = 0; i < 64; i += 16) { g.fillRect(i + 1, 0, 1, h); g.fillRect(0, i + 1, w, 1); }
+  g.fillStyle = '#2a2620'; g.fillRect(47, 47, 4, 3); g.fillRect(48, 50, 2, 1);
 });
 const ceilTex = canvasTex(64, 64, (g, w, h) => {
   g.fillStyle = '#b8b4a8'; g.fillRect(0, 0, w, h); noise(g, w, h, 700, ['#a8a498', '#c4c0b4', '#9c988c']);
   g.fillStyle = '#6a685e'; g.fillRect(0, 0, w, 2); g.fillRect(0, 32, w, 2); g.fillRect(0, 0, 2, h); g.fillRect(32, 0, 2, h);
   g.fillStyle = 'rgba(120,90,40,0.35)'; g.beginPath(); g.ellipse(46, 18, 7, 5, 0.3, 0, 7); g.fill(); // water stain
 });
-const lockerTex = canvasTex(32, 64, (g, w, h) => {
-  g.fillStyle = '#3a6a78'; g.fillRect(0, 0, w, h);
-  g.fillStyle = '#2a4e5a'; g.fillRect(0, 0, 1, h); g.fillRect(w - 1, 0, 1, h);
-  for (let y = 4; y < 14; y += 2) { g.fillStyle = '#16303a'; g.fillRect(8, y, 16, 1); }
-  for (let y = 50; y < 60; y += 2) { g.fillStyle = '#16303a'; g.fillRect(8, y, 16, 1); }
-  g.fillStyle = '#9aa8a8'; g.fillRect(24, 28, 3, 9);
-  g.fillStyle = '#d8d0b8'; g.fillRect(8, 18, 10, 5); g.fillStyle = '#222'; g.font = '5px monospace'; g.fillText(String(100 + ((Math.random() * 300) | 0)), 8, 22);
-  noise(g, w, h, 60, ['#4a7a88', '#2e5866']);
-});
+function lockerVariant(kind) {
+  return canvasTex(32, 64, (g, w, h) => {
+    g.fillStyle = '#3a6a78'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#2a4e5a'; g.fillRect(0, 0, 1, h); g.fillRect(w - 1, 0, 1, h);
+    for (let y = 4; y < 14; y += 2) { g.fillStyle = '#16303a'; g.fillRect(8, y, 16, 1); }
+    for (let y = 50; y < 60; y += 2) { g.fillStyle = '#16303a'; g.fillRect(8, y, 16, 1); }
+    g.fillStyle = '#9aa8a8'; g.fillRect(24, 28, 3, 9);
+    g.fillStyle = '#d8d0b8'; g.fillRect(8, 18, 10, 5); g.fillStyle = '#222'; g.font = '5px monospace'; g.fillText(String(100 + ((Math.random() * 300) | 0)), 8, 22);
+    noise(g, w, h, 90, ['#4a7a88', '#2e5866', '#24464f']);
+    g.fillStyle = 'rgba(20,10,5,0.35)'; g.fillRect(0, h - 6, w, 6);
+    for (let i = 0; i < 5; i++) { g.fillStyle = 'rgba(200,220,220,0.35)'; g.fillRect((rnd(2, 28)) | 0, (rnd(10, 60)) | 0, (rnd(2, 7)) | 0, 1); }
+    if (kind === 1) { for (let i = 0; i < 40; i++) { g.fillStyle = ['#8a4a20', '#6a3418', '#a85a28'][i % 3]; g.fillRect(24 + rnd(-4, 4), 36 + rnd(0, 26), 1, rnd(1, 3)); } g.fillStyle = 'rgba(120,60,20,0.5)'; g.fillRect(0, 54, w, 10); }
+    if (kind === 2) { g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(14, 38, 7, 5, 0.3, 0, 7); g.fill(); g.fillStyle = 'rgba(160,200,210,0.3)'; g.fillRect(10, 35, 6, 1); }
+    if (kind === 3) { g.fillStyle = '#f0e040'; g.fillRect(6, 26, 7, 7); g.fillStyle = '#e04040'; g.fillRect(14, 40, 6, 6); g.fillStyle = '#f0f0f0'; g.fillRect(4, 44, 9, 6); g.fillStyle = '#222'; g.fillRect(6, 46, 5, 1); }
+    if (kind === 4) { g.fillStyle = 'rgba(220,230,230,0.7)'; g.font = 'bold 6px monospace'; g.fillText('HELP', 6, 46); }
+  });
+}
+const lockerTexes = [0, 0, 1, 2, 3, 0, 1, 4, 2].map(lockerVariant);
 function doorTex(label, ajar) {
   return canvasTex(32, 64, (g, w, h) => {
     g.fillStyle = '#7a5434'; g.fillRect(0, 0, w, h);
@@ -153,6 +175,10 @@ function doorTex(label, ajar) {
     g.fillStyle = '#c8c8c0'; g.fillRect(5, 6, 8, 22); g.fillStyle = '#05060a'; g.fillRect(6, 7, 6, 20);
     if (ajar) { g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(9, 12, 1, 2); }
     g.fillStyle = '#c0a040'; g.fillRect(25, 34, 4, 2);
+    g.fillStyle = '#8a8a86'; g.fillRect(0, 54, w, 10); noise(g, w, 10, 60, ['#5a5a56', '#2a2a28']);
+    for (let i = 0; i < 6; i++) { g.fillStyle = 'rgba(20,14,8,0.6)'; g.fillRect(rnd(0, 28) | 0, rnd(50, 62) | 0, rnd(2, 6) | 0, 1); }
+    for (let i = 0; i < 8; i++) { g.fillStyle = 'rgba(210,190,160,0.45)'; g.fillRect(rnd(2, 28) | 0, rnd(30, 52) | 0, rnd(1, 5) | 0, 1); }
+    g.fillStyle = 'rgba(30,20,10,0.35)'; g.fillRect(22, 30, 9, 10);
     g.fillStyle = '#e8e4d8'; g.fillRect(16, 8, 12, 6); g.fillStyle = '#222'; g.font = 'bold 5px Arial'; g.fillText(label, 17, 13);
   });
 }
@@ -204,7 +230,7 @@ const blindsTex = canvasTex(32, 32, (g, w, h) => {
 // ---------- architecture ----------
 // IT office: x[-2.5,2.5] z[-2,2]; hallway: x[2.5,4.5] z[-12.5,2]; ceiling 2.7
 const H = 2.7;
-const cinder = (len, h) => lam({ map: tiled(cinderTex, len / 0.8, h / 0.8) });
+const cinder = (len, h) => lam({ map: tiled(cinderTex, len / 1.6, h / 1.6) });
 const statics = [];
 function wallX(x, z1, z2, y1 = 0, y2 = H) { const m = box(0.12, y2 - y1, z2 - z1, cinder(z2 - z1, y2 - y1), x, (y1 + y2) / 2, (z1 + z2) / 2); statics.push(m); return m; }
 function wallZ(z, x1, x2, y1 = 0, y2 = H) { const m = box(x2 - x1, y2 - y1, 0.12, cinder(x2 - x1, y2 - y1), (x1 + x2) / 2, (y1 + y2) / 2, z); statics.push(m); return m; }
@@ -386,8 +412,21 @@ for (let i = 0; i < 5; i++) { const b = new THREE.Mesh(new THREE.IcosahedronGeom
 box(0.6, 0.03, 1.2, lam({ color: 0x8a8a86 }), 0, H - 0.02, 0.2);
 
 // ---------- hallway props ----------
-const lockerMat = lam({ map: lockerTex }), lockerSide = lam({ color: 0x2e5866 });
-for (const [z0, n] of [[-0.9, 9], [-6.9, 9]]) for (let i = 0; i < n; i++) faced(0.4, 1.85, 0.38, lockerSide, 1, lam({ map: lockerTex.clone() }), 4.25, 0.925, z0 - i * 0.39);
+const lockerSide = lam({ color: 0x2e5866 });
+let lockerN = 0;
+for (const [z0, n] of [[-0.9, 9], [-6.9, 9]]) for (let i = 0; i < n; i++) {
+  const z = z0 - i * 0.39, k = lockerN++;
+  if (k === 5) {
+    faced(0.4, 1.85, 0.38, lockerSide, 1, lam({ color: 0x0a0c10 }), 4.25, 0.925, z);
+    const hinge = new THREE.Group(); hinge.position.set(4.05, 0.925, z - 0.19); hinge.rotation.y = -1.9; scene.add(hinge);
+    faced(0.02, 1.8, 0.37, lockerSide, 0, lam({ map: lockerTexes[2] }), 0, 0, 0.185).parent = hinge;
+    box(0.3, 0.02, 0.3, lam({ color: 0x5a6a70 }), 4.27, 1.45, z);
+    box(0.18, 0.22, 0.08, lam({ color: 0x8a2a2a }), 4.3, 0.12, z).rotation.y = 0.4;
+    const pg = plane(0.16, 0.2, lam({ color: 0xe8e4d8 }), 4.38, 1.2, z); pg.rotation.y = -Math.PI / 2;
+    continue;
+  }
+  faced(0.4, 1.85, 0.38, lockerSide, 1, lam({ map: lockerTexes[k % lockerTexes.length] }), 4.25, 0.925, z);
+}
 // lockers re-randomize texture numbers per clone not possible; fine at this res
 // classroom doors
 function door(label, x, z, facing, ajar) {
@@ -448,6 +487,112 @@ box(0.14, 0.75, 0.14, dark, -0.1, 0.38, 0, figure); box(0.14, 0.75, 0.14, dark, 
 box(0.1, 0.85, 0.1, dark, -0.26, 1.05, 0, figure).rotation.z = 0.05; box(0.1, 0.9, 0.1, dark, 0.26, 1.02, 0, figure).rotation.z = -0.04;
 const fhead = new THREE.Mesh(new THREE.IcosahedronGeometry(0.14, 0), dark); fhead.position.set(0.02, 1.78, 0); fhead.rotation.z = 0.3; figure.add(fhead);
 let figureGone = false;
+
+// ---------- crust pass ----------
+function decal(tex, w, h, x, y, z, ry = 0, rx = 0, opacity = 1) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), lam({ map: tex, transparent: true, depthWrite: false, opacity, polygonOffset: true, polygonOffsetFactor: -2 }));
+  m.rotation.order = 'YXZ'; m.rotation.set(rx, ry, 0); m.position.set(x, y, z); scene.add(m); return m;
+}
+const E = Math.PI / 2;
+const grimeTex = canvasTex(32, 32, (g, w, h) => {
+  for (let y = 0; y < h; y++) { g.fillStyle = `rgba(30,22,12,${Math.pow(y / h, 2) * 0.85})`; g.fillRect(0, y, w, 1); }
+  for (let i = 0; i < 120; i++) { g.fillStyle = `rgba(20,14,8,${rnd(0.1, 0.4)})`; g.fillRect(rnd(0, w) | 0, (h * 0.4 + rnd(0, h * 0.6)) | 0, 1, rnd(1, 3) | 0); }
+});
+const floorEdgeTex = canvasTex(32, 32, (g, w, h) => {
+  for (let x = 0; x < w; x++) { g.fillStyle = `rgba(28,22,14,${Math.pow(1 - x / w, 2) * 0.8})`; g.fillRect(x, 0, 1, h); }
+  noise(g, 10, h, 60, ['rgba(20,15,10,0.5)']);
+});
+const dripTex = canvasTex(16, 64, (g, w, h) => {
+  for (let i = 0; i < 6; i++) { const x = rnd(2, 14) | 0, len = rnd(20, 62); for (let y = 0; y < len; y++) { g.fillStyle = `rgba(110,64,24,${0.55 * (1 - y / len)})`; g.fillRect(x, y, 1 + (y < 6 ? 1 : 0), 1); } }
+  g.fillStyle = 'rgba(110,64,24,0.5)'; g.fillRect(0, 0, w, 3);
+});
+const stainTex = canvasTex(32, 32, (g) => {
+  for (let r = 14; r > 2; r -= 2) { g.fillStyle = `rgba(${120 - r * 2},${88 - r * 2},40,${r === 14 ? 0.5 : 0.12})`; g.beginPath(); g.ellipse(16 + rnd(-1, 1), 16 + rnd(-1, 1), r, r * 0.8, rnd(0, 3), 0, 7); g.fill(); }
+});
+const coffeeTex = canvasTex(16, 16, (g) => { g.strokeStyle = 'rgba(70,40,15,0.8)'; g.lineWidth = 1.5; g.beginPath(); g.arc(8, 8, 5.5, 0, 6); g.stroke(); });
+const scuffTex = canvasTex(32, 16, (g) => {
+  for (let i = 0; i < 5; i++) { g.strokeStyle = `rgba(15,12,10,${rnd(0.3, 0.7)})`; g.lineWidth = 1; g.beginPath(); const y = rnd(3, 13); g.moveTo(rnd(0, 8), y); g.quadraticCurveTo(16, y + rnd(-6, 6), rnd(22, 32), y + rnd(-3, 3)); g.stroke(); }
+});
+const gumTex = canvasTex(8, 8, (g) => { g.fillStyle = 'rgba(40,36,34,0.85)'; g.beginPath(); g.ellipse(4, 4, 2.5, 2, 0, 0, 7); g.fill(); });
+const crackTex = canvasTex(64, 64, (g) => {
+  g.strokeStyle = 'rgba(230,235,255,0.75)'; g.lineWidth = 1;
+  const arms = 6; for (let a = 0; a < arms; a++) { let x = 22, y = 30, ang = a / arms * 6.28; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 6; k++) { ang += rnd(-0.5, 0.5); x += Math.cos(ang) * rnd(3, 7); y += Math.sin(ang) * rnd(3, 7); g.lineTo(x, y); } g.stroke(); }
+  g.beginPath(); g.arc(22, 30, 4, 0, 7); g.stroke();
+});
+const webTex = canvasTex(32, 32, (g) => {
+  g.strokeStyle = 'rgba(220,220,230,0.55)'; g.lineWidth = 1;
+  for (let a = 0; a < 6; a++) { g.beginPath(); g.moveTo(0, 0); const an = a / 5 * Math.PI / 2; g.lineTo(Math.cos(an) * 32, Math.sin(an) * 32); g.stroke(); }
+  for (let r = 6; r < 32; r += 5) { g.beginPath(); g.arc(0, 0, r + rnd(-1, 1), 0, Math.PI / 2); g.stroke(); }
+});
+const peelTex = canvasTex(32, 32, (g) => {
+  g.fillStyle = 'rgba(150,140,110,0.9)'; g.beginPath();
+  for (let a = 0; a < 7; a += 0.5) { const r = rnd(7, 14); g.lineTo(16 + Math.cos(a) * r, 16 + Math.sin(a) * r * 0.8); } g.fill();
+  g.strokeStyle = 'rgba(240,235,215,0.8)'; g.stroke();
+});
+const bugsTex = canvasTex(32, 64, (g) => { for (let i = 0; i < 30; i++) { g.fillStyle = 'rgba(20,18,14,0.8)'; g.fillRect(rnd(2, 30) | 0, rnd(2, 62) | 0, 1 + (Math.random() < 0.3 ? 1 : 0), 1); } g.fillStyle = 'rgba(80,70,40,0.3)'; g.fillRect(0, 50, 32, 14); });
+const tapeTex = canvasTex(16, 64, (g) => { g.fillStyle = 'rgba(150,150,150,0.9)'; g.fillRect(0, 0, 16, 64); noise(g, 16, 64, 60, ['#8a8a8a', '#aaaaaa']); g.fillStyle = 'rgba(40,36,30,0.5)'; g.fillRect(0, 0, 16, 2); g.fillRect(0, 62, 16, 2); });
+const noteTex = (txt, col = '#f0e060') => canvasTex(16, 16, (g) => { g.fillStyle = col; g.fillRect(0, 0, 16, 16); g.fillStyle = '#2a2aa8'; g.font = '4px Arial'; txt.split('|').forEach((t, i) => g.fillText(t, 1, 5 + i * 4)); });
+
+// grime along the bottoms of every wall
+const gStrip = (len, x, z, ry) => decal(tiled(grimeTex, len / 1.2, 1), len, 0.45, x, 0.225, z, ry);
+gStrip(14.5, 2.575, -5.25, E); gStrip(14.5, 4.425, -5.25, -E); gStrip(2, 3.5, -12.425, 0); gStrip(2, 3.5, 1.925, Math.PI);
+gStrip(5, 0, -1.925, 0); gStrip(5, 0, 1.925, Math.PI); gStrip(4, -2.425, 0, E); gStrip(1.5, 2.425, -1.25, -E); gStrip(1.5, 2.425, 1.25, -E);
+// dirt collecting along the floor edges in the hall
+decal(tiled(floorEdgeTex, 1, 10), 0.4, 14.5, 2.76, 0.003, -5.25, 0, -E);
+decal(tiled(floorEdgeTex, 1, 10), 0.4, 14.5, 4.24, 0.003, -5.25, Math.PI, -E);
+// scuffs + gum on the hall floor
+for (let i = 0; i < 14; i++) decal(scuffTex, rnd(0.3, 0.6), 0.2, rnd(2.8, 4.2), 0.004, rnd(-12, 1.5), rnd(0, 6), -E, rnd(0.5, 1));
+for (let i = 0; i < 18; i++) { const s2 = rnd(0.03, 0.06); decal(gumTex, s2, s2, rnd(2.7, 4.3), 0.005, rnd(-12.2, 1.8), 0, -E); }
+// water stains + drips
+decal(dripTex, 0.35, 1.3, 4.43, 1.85, -3.2, -E); decal(dripTex, 0.3, 1.0, 4.43, 2.05, -9.6, -E);
+decal(dripTex, 0.3, 1.2, 2.57, 1.95, -11.0, E); decal(dripTex, 0.4, 1.0, -1.0, 2.15, -1.925, 0);
+decal(dripTex, 0.3, 0.9, -2.425, 2.2, -1.2, E);
+for (const [x, z] of [[3.3, -2.8], [3.9, -7.2], [3.4, -10.9], [-1.4, 1.0], [0.9, -0.6]]) decal(stainTex, rnd(0.4, 0.7), rnd(0.4, 0.7), x, H - 0.004, z, rnd(0, 6), E);
+// peeling paint on the hall walls
+for (const [z, y] of [[-1.8, 1.4], [-3.6, 0.6], [-6.2, 1.9], [-10.4, 1.2], [-12.0, 0.7]]) decal(peelTex, rnd(0.2, 0.35), rnd(0.2, 0.3), 2.575, y, z, E);
+// cracked window
+plane(0.42, 0.42, basic({ map: crackTex, transparent: true, opacity: 0.5, depthWrite: false }), 3.22, 1.62, -12.415);
+// cobwebs in the corners
+for (const [x, z, ry] of [[2.62, -12.38, Math.PI / 4], [4.38, -12.38, -Math.PI / 4], [-2.38, -1.88, Math.PI / 4], [-2.38, 1.88, Math.PI * 3 / 4], [4.38, 1.88, -Math.PI * 3 / 4]]) {
+  const w = decal(webTex, 0.6, 0.6, x, H - 0.3, z, ry, 0, 0.9); w.material.side = THREE.DoubleSide; w.scale.x = (ry > 0 ? 1 : -1);
+}
+// dead bugs inside the light covers
+for (const z of [-0.9, -4.9, -8.9]) decal(bugsTex, 0.5, 1.1, 3.5, H - 0.04, z, 0, E, 0.9);
+
+// rusty pipe along the hall ceiling, with brackets and a drip below
+const rust = lam({ color: 0x6a4a34 });
+const pipe = cyl(0.05, 0.05, 14.5, 6, rust, 4.28, 2.5, -5.25); pipe.rotation.x = E;
+for (let z = 1.5; z > -12.5; z -= 2.2) box(0.14, 0.2, 0.04, lam({ color: 0x3a3a3a }), 4.36, 2.6, z);
+for (const z of [-3.2, -9.6]) { const b = box(0.03, 0.03, 0.03, rust, 4.28, 2.44, z); b.userData.drip = true; }
+const dripDrop = box(0.012, 0.025, 0.012, lam({ color: 0x9ab0c8, emissive: 0x101820 }), 4.28, 2.4, -3.2);
+const dripPuddle = decal(stainTex, 0.35, 0.3, 4.15, 0.005, -3.2, 0, -E, 0.8);
+
+// rusty vent grate low on the west wall
+const ventTex = canvasTex(32, 16, (g) => { g.fillStyle = '#5a5248'; g.fillRect(0, 0, 32, 16); for (let x = 2; x < 32; x += 3) { g.fillStyle = '#16120e'; g.fillRect(x, 2, 1, 12); } g.fillStyle = 'rgba(120,60,20,0.6)'; g.fillRect(0, 10, 32, 6); });
+decal(ventTex, 0.5, 0.25, 2.578, 0.32, -6.0, E); decal(dripTex, 0.4, 0.5, 2.576, 0.05, -6.0, E, 0, 0.6);
+
+// missing + sagging ceiling tiles, with wires hanging out
+const hole = (x, z, w, d) => { const m = plane(w, d, basic({ color: 0x020203, polygonOffset: true, polygonOffsetFactor: -2 }), x, H - 0.003, z); m.rotation.x = E; return m; };
+hole(3.85, -6.6, 0.6, 0.6); hole(-1.2, -0.4, 0.6, 0.6);
+cable([[3.7, H, -6.5], [3.75, 2.25, -6.55], [3.82, 2.0, -6.7]], 0x222222, 0.006);
+cable([[4.0, H, -6.8], [3.95, 2.35, -6.7], [4.05, 2.15, -6.6]], 0xa83020, 0.005);
+cable([[-1.3, H, -0.3], [-1.25, 2.3, -0.4], [-1.1, 2.15, -0.5]], 0x2a4aa8, 0.006);
+const sag = box(0.6, 0.015, 0.6, lam({ map: ceilTex }), 3.15, H - 0.17, -3.9); sag.rotation.z = 0.5;
+
+// office crust: carpet stains, coffee rings, duct tape, sticky notes, dust bunnies, dead plant
+for (let i = 0; i < 6; i++) decal(stainTex, rnd(0.3, 0.6), rnd(0.25, 0.5), rnd(-2, 2), 0.004, rnd(-1.5, 1.6), rnd(0, 6), -E, 0.8);
+for (const [x, z] of [[0.45, -1.3], [-0.2, -1.8], [0.62, -1.75], [-0.85, -1.35]]) decal(coffeeTex, 0.09, 0.09, x, DT + 0.002, z, rnd(0, 6), -E);
+decal(tiled(tapeTex, 1, 1), 0.1, 0.7, -0.75, 0.006, -0.6, 0.6, -E);
+const notes = [['DO NOT|REBOOT', '#f0e060'], ['pw on|back', '#f09ac0'], ['113??', '#f0e060'], ['CALL|BACK', '#9ae0a0']];
+const crtNote = plane(0.07, 0.07, lam({ map: noteTex(...notes[0]) }), 0.16, 0.36, 0.193, 0.1, crt);
+plane(0.07, 0.07, lam({ map: noteTex(...notes[2]) }), -0.17, 0.08, 0.193, -0.15, crt);
+decal(noteTex(...notes[1]), 0.07, 0.07, 0.13, DT + 0.003, -1.42, 0.4, -E);
+decal(noteTex(...notes[3]), 0.08, 0.08, RKX + 0.1, 1.55, RKZ - 0.42, Math.PI);
+for (let i = 0; i < 5; i++) { const d = new THREE.Mesh(new THREE.IcosahedronGeometry(rnd(0.03, 0.06), 0), lam({ color: 0x6a6670 })); d.scale.y = 0.4; d.position.set(rnd(-0.9, 0.9), 0.015, rnd(-1.85, -1.3)); scene.add(d); }
+cyl(0.09, 0.07, 0.13, 7, lam({ color: 0x8a4a2a }), 1.85, 1.365, -1.65);
+for (let i = 0; i < 4; i++) { const st = box(0.01, rnd(0.15, 0.3), 0.01, lam({ color: 0x5a4a28 }), 1.85 + rnd(-0.03, 0.03), 1.5, -1.65 + rnd(-0.03, 0.03)); st.rotation.set(rnd(-0.6, 0.6), 0, rnd(-0.8, 0.8)); }
+// grime on the server rack + gear
+decal(tiled(grimeTex, 1, 1), 0.62, 0.5, RKX, 0.25, RKZ - 0.418, Math.PI, 0, 0.7);
 
 // ---------- lights ----------
 scene.add(new THREE.AmbientLight(0x2a2a52, 1.15));
@@ -563,6 +708,7 @@ let acc = 0;
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.1), t = clock.elapsedTime;
   pollPad();
+  postMat.uniforms.time.value = t;
 
   // camera tween + idle sway + footstep bob
   let bob = 0;
@@ -591,6 +737,10 @@ function frame() {
   hallLights[1].intensity = 2.4 * buzz;
   fixtures[1].material.color.setScalar(0.25 + 0.75 * buzz);
   laptopLight.intensity = 1.7 + Math.sin(t * 9) * 0.05;
+
+  // pipe drip falls every ~3s
+  const dk = (t % 3) / 3;
+  dripDrop.position.y = 2.4 - Math.pow(dk, 2) * 2.4; dripDrop.visible = dk < 0.98;
 
   // the figure: only there until you walk toward it
   figure.visible = !figureGone;

@@ -16,7 +16,7 @@ const snapRes = { value: new THREE.Vector2(160, 120) };
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x06050c);
-scene.fog = new THREE.Fog(0x06050c, 3, 13);
+scene.fog = new THREE.Fog(0x06050c, 5, 42);
 
 const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.03, 40);
 camera.rotation.order = 'YXZ';
@@ -237,7 +237,11 @@ function wallZ(z, x1, x2, y1 = 0, y2 = H) { const m = box(x2 - x1, y2 - y1, 0.12
 
 wallZ(-2, -2.5, 2.5); wallZ(2, -2.5, 2.5); wallX(-2.5, -2, 2);
 wallX(2.5, -12.5, -0.5); wallX(2.5, 0.5, 2); wallX(2.5, -0.5, 0.5, 2.1, H); // shared wall w/ office door gap
-wallX(4.5, -12.5, 2); wallZ(-12.5, 2.5, 4.5); wallZ(2, 2.5, 4.5);
+wallX(4.5, -12.5, 2); wallZ(2, 2.5, 4.5);
+const endWall = [];
+for (const [x1, x2, y1, y2] of [[2.5, 2.8, 0, H], [4.2, 4.5, 0, H], [2.8, 4.2, 0, 0.95], [2.8, 4.2, 2.05, H]]) {
+  const m = box(x2 - x1, y2 - y1, 0.12, cinder(x2 - x1, y2 - y1), (x1 + x2) / 2, (y1 + y2) / 2, -12.5); m.userData.castOutside = true; endWall.push(m);
+}
 
 const officeFloor = plane(5, 4, lam({ map: tiled(carpetTex, 10, 8) }), 0, 0, 0); officeFloor.rotation.x = -Math.PI / 2;
 const hallFloor = plane(2, 14.5, lam({ map: tiled(vctTex, 2 / 1.0, 14.5 / 1.0) }), 3.5, 0, -5.25); hallFloor.rotation.x = -Math.PI / 2;
@@ -467,7 +471,8 @@ const wc = cyl(0.2, 0.2, 0.06, 12, lam({ color: 0x1a1a1a }), 4.42, 1.75, 0.0); w
 const wcFace = plane(0.36, 0.36, lam({ map: wallClockTex, transparent: true, alphaTest: 0.5 }), 4.385, 1.75, 0.0, -Math.PI / 2);
 
 // end-of-hall window to the parking lot
-plane(1.4, 1.1, basic({ map: outsideTex }), 3.5, 1.5, -12.43);
+plane(1.4, 1.1, basic({ color: 0x8aa0c8, transparent: true, opacity: 0.025, depthWrite: false }), 3.5, 1.5, -12.5);
+box(1.4, 0.04, 0.2, doorFrame, 3.5, 0.95, -12.48); // sill
 box(1.5, 0.06, 0.08, doorFrame, 3.5, 0.95, -12.42); box(1.5, 0.06, 0.08, doorFrame, 3.5, 2.05, -12.42); box(0.05, 1.1, 0.08, doorFrame, 3.5, 1.5, -12.42);
 
 // fluorescent fixtures in the hall
@@ -551,7 +556,7 @@ for (const [x, z] of [[3.3, -2.8], [3.9, -7.2], [3.4, -10.9], [-1.4, 1.0], [0.9,
 // peeling paint on the hall walls
 for (const [z, y] of [[-1.8, 1.4], [-3.6, 0.6], [-6.2, 1.9], [-10.4, 1.2], [-12.0, 0.7]]) decal(peelTex, rnd(0.2, 0.35), rnd(0.2, 0.3), 2.575, y, z, E);
 // cracked window
-plane(0.42, 0.42, basic({ map: crackTex, transparent: true, opacity: 0.5, depthWrite: false }), 3.22, 1.62, -12.415);
+plane(0.42, 0.42, basic({ map: crackTex, transparent: true, opacity: 0.5, depthWrite: false }), 3.22, 1.62, -12.49);
 // cobwebs in the corners
 for (const [x, z, ry] of [[2.62, -12.38, Math.PI / 4], [4.38, -12.38, -Math.PI / 4], [-2.38, -1.88, Math.PI / 4], [-2.38, 1.88, Math.PI * 3 / 4], [4.38, 1.88, -Math.PI * 3 / 4]]) {
   const w = decal(webTex, 0.6, 0.6, x, H - 0.3, z, ry, 0, 0.9); w.material.side = THREE.DoubleSide; w.scale.x = (ry > 0 ? 1 : -1);
@@ -594,6 +599,85 @@ for (let i = 0; i < 4; i++) { const st = box(0.01, rnd(0.15, 0.3), 0.01, lam({ c
 // grime on the server rack + gear
 decal(tiled(grimeTex, 1, 1), 0.62, 0.5, RKX, 0.25, RKZ - 0.418, Math.PI, 0, 0.7);
 
+// ---------- outside: the parking lot ----------
+const asphaltTex = canvasTex(64, 64, (g, w, h) => {
+  g.fillStyle = '#2a2a2e'; g.fillRect(0, 0, w, h); noise(g, w, h, 1500, ['#232327', '#323236', '#1c1c20', '#3a3a3e']);
+  g.strokeStyle = 'rgba(10,10,12,0.8)'; g.lineWidth = 1; for (let i = 0; i < 3; i++) { g.beginPath(); let x = rnd(0, w), y = rnd(0, h); g.moveTo(x, y); for (let k = 0; k < 6; k++) { x += rnd(-8, 8); y += rnd(-8, 8); g.lineTo(x, y); } g.stroke(); }
+  g.fillStyle = 'rgba(15,15,18,0.6)'; g.beginPath(); g.ellipse(40, 20, 7, 4, 0.4, 0, 7); g.fill();
+});
+const grassTex = canvasTex(32, 32, (g, w, h) => { g.fillStyle = '#1c2414'; g.fillRect(0, 0, w, h); noise(g, w, h, 600, ['#24301a', '#141a0e', '#2c3a20', '#3a3a22']); });
+const concreteTex = canvasTex(32, 32, (g, w, h) => { g.fillStyle = '#6a6862'; g.fillRect(0, 0, w, h); noise(g, w, h, 500, ['#5e5c56', '#76746e', '#55534e']); g.fillStyle = '#3a3834'; g.fillRect(0, 0, 1, h); });
+const outside = (o) => { o.userData.outside = true; return o; };
+const ground = outside(plane(40, 14, lam({ map: tiled(asphaltTex, 10, 3.5) }), 3, 0, -20.6)); ground.rotation.x = -E;
+const walk = outside(plane(40, 1.3, lam({ map: tiled(concreteTex, 20, 1) }), 3, 0.06, -13.2)); walk.rotation.x = -E;
+outside(box(40, 0.14, 0.15, lam({ map: concreteTex }), 3, 0.07, -13.9));
+const grass = outside(plane(60, 30, lam({ map: tiled(grassTex, 24, 12) }), 3, -0.01, -42)); grass.rotation.x = -E;
+outside(box(40, 0.12, 0.15, lam({ map: concreteTex }), 3, 0.06, -27.5));
+// outer face of the school wall
+// parking stripes + stop blocks
+const paint = lam({ color: 0xd8b040 });
+for (let x = -6; x <= 12; x += 2.8) { outside(box(0.1, 0.01, 4.6, paint, x, 0.006, -17.2)); outside(box(1.4, 0.12, 0.18, lam({ map: concreteTex }), x + 1.4, 0.06, -15.0)); }
+outside(box(20, 0.01, 0.1, paint, 3, 0.006, -19.6));
+// sodium streetlight
+const pole = lam({ color: 0x3a3a3c });
+outside(cyl(0.08, 0.11, 4.8, 6, pole, 1.0, 2.4, -17.5));
+outside(box(0.9, 0.06, 0.06, pole, 1.4, 4.75, -17.5));
+outside(box(0.55, 0.14, 0.28, pole, 1.75, 4.7, -17.5));
+const lampHead = outside(box(0.45, 0.04, 0.22, basic({ color: 0xffd090 }), 1.75, 4.62, -17.5)); lampHead.userData.noShadow = true;
+outside(cyl(0.2, 0.25, 0.3, 6, lam({ map: concreteTex }), 1.0, 0.15, -17.5));
+// light cone haze under the lamp
+const haze = outside(cyl(0.25, 2.2, 4.5, 8, basic({ color: 0xff9a40, transparent: true, opacity: 0.018, depthWrite: false, side: THREE.DoubleSide }), 1.75, 2.35, -17.5)); haze.userData.noShadow = true; haze.visible = false;
+
+// the work truck (ladder rack, toolbox, beat up)
+const truck = new THREE.Group(); truck.position.set(5.6, 0, -17.9); truck.rotation.y = 0.55; scene.add(truck); truck.userData.outside = true;
+const tWhite = lam({ color: 0xc8c4bc }), tDark = lam({ color: 0x1a1a1e }), tGlass = lam({ color: 0x1a2030 }), tRack = lam({ color: 0x141414 });
+box(1.9, 0.55, 5.0, tWhite, 0, 0.75, 0, truck);             // body
+box(1.85, 0.7, 1.6, tWhite, 0, 1.35, 0.55, truck);          // cab
+box(1.75, 0.5, 1.4, tGlass, 0, 1.42, 0.55, truck).scale.set(1.03, 1, 1.02);
+box(1.9, 0.18, 1.5, tWhite, 0, 1.08, 1.95, truck);          // hood
+box(1.9, 0.12, 0.08, lam({ color: 0x8a8a8a }), 0, 0.6, 2.52, truck); // bumper
+box(1.9, 0.12, 0.08, lam({ color: 0x8a8a8a }), 0, 0.6, -2.52, truck);
+for (const x of [-0.9, 0.9]) box(0.06, 0.45, 2.3, tWhite, x, 1.25, -1.35, truck); // bed walls
+box(1.9, 0.45, 0.06, tWhite, 0, 1.25, -2.5, truck);
+box(1.7, 0.35, 0.45, lam({ color: 0x8a8e94 }), 0, 1.2, -0.45, truck); // toolbox
+for (const [x, z] of [[-0.95, 1.6], [0.95, 1.6], [-0.95, -1.6], [0.95, -1.6]]) { const w = cyl(0.36, 0.36, 0.26, 8, tDark, x, 0.36, z, truck); w.rotation.z = E; }
+// ladder rack
+for (const z of [-2.45, -0.25]) { box(0.06, 1.0, 0.06, tRack, -0.92, 1.95, z, truck); box(0.06, 1.0, 0.06, tRack, 0.92, 1.95, z, truck); box(1.9, 0.06, 0.06, tRack, 0, 2.45, z, truck); }
+box(0.06, 0.06, 2.3, tRack, -0.92, 2.45, -1.35, truck); box(0.06, 0.06, 2.3, tRack, 0.92, 2.45, -1.35, truck);
+box(0.4, 0.05, 3.2, lam({ color: 0x8a8a7a }), 0.4, 2.51, -1.0, truck); // ladder on top
+box(0.08, 0.06, 0.02, basic({ color: 0xff2010 }), -0.8, 0.95, -2.54, truck); box(0.08, 0.06, 0.02, basic({ color: 0xff2010 }), 0.8, 0.95, -2.54, truck);
+// side lettering
+const truckDecal = canvasTex(64, 16, (g) => { g.fillStyle = '#1a2a6a'; g.font = 'bold 7px Arial'; g.fillText('DISTRICT IT', 3, 8); g.font = '5px Arial'; g.fillText('FACILITIES  #07', 3, 14); });
+const td = plane(1.4, 0.35, lam({ map: truckDecal, transparent: true }), 0.961, 0.8, 0.3, E, truck); td.material.alphaTest = 0.4;
+
+// a second car, abandoned under a tree
+const car = new THREE.Group(); car.position.set(-3.6, 0, -21.5); car.rotation.y = -0.2; scene.add(car); car.userData.outside = true;
+box(1.7, 0.5, 4.0, lam({ color: 0x4a2a2a }), 0, 0.55, 0, car); box(1.6, 0.45, 2.0, lam({ color: 0x4a2a2a }), 0, 1.0, -0.2, car); box(1.55, 0.38, 1.9, tGlass, 0, 1.03, -0.2, car).scale.set(1.03, 1, 1.02);
+for (const [x, z] of [[-0.85, 1.25], [0.85, 1.25], [-0.85, -1.25], [0.85, -1.25]]) { const w = cyl(0.3, 0.3, 0.2, 8, tDark, x, 0.3, z, car); w.rotation.z = E; }
+
+// trees + bushes (layered low-poly blobs, lit by the lamp)
+const leaf = [lam({ color: 0x24341c }), lam({ color: 0x1c2a16 }), lam({ color: 0x30401e })];
+function tree(x, z, s2) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.scale.setScalar(s2); scene.add(g); g.userData.outside = true;
+  cyl(0.14, 0.2, 3.2, 5, lam({ color: 0x2a2018 }), 0, 1.6, 0, g);
+  for (let i = 0; i < 6; i++) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(rnd(0.9, 1.5), 0), leaf[i % 3]); b.position.set(rnd(-0.9, 0.9), rnd(2.8, 4.6), rnd(-0.9, 0.9)); b.rotation.set(rnd(0, 3), rnd(0, 3), 0); g.add(b); }
+}
+for (const [x, z, s2] of [[-2, -26, 1.2], [1.5, -28, 1.4], [6, -27, 1.1], [10, -29, 1.5], [-6, -24, 1.0], [13, -25, 1.2], [-1.0, -23.2, 0.9]]) tree(x, z, s2);
+for (let i = 0; i < 9; i++) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(rnd(0.4, 0.8), 0), leaf[i % 3]); b.position.set(rnd(-6, 12), 0.35, rnd(-27.2, -26)); b.scale.y = 0.7; scene.add(b); b.userData.outside = true; }
+// tall dry weeds by the curb (like your reference)
+const weedTex = canvasTex(16, 32, (g) => { for (let i = 0; i < 10; i++) { g.fillStyle = ['#8a6a3a', '#6a5030', '#a08048'][i % 3]; const x = rnd(1, 15) | 0, h2 = rnd(14, 30) | 0; g.fillRect(x, 32 - h2, 1, h2); g.fillRect(x - 1, 32 - h2, 3, 3); } });
+for (let i = 0; i < 10; i++) { const wd = plane(rnd(0.5, 0.9), rnd(0.6, 1.0), lam({ map: weedTex, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }), rnd(-5, 12), 0.35, rnd(-27.8, -27.3), rnd(-0.5, 0.5)); wd.userData.outside = true; }
+
+// distant building silhouette with a couple of lit windows
+const farTex = canvasTex(64, 32, (g, w, h) => { g.fillStyle = '#0e0e16'; g.fillRect(0, 0, w, h); for (let i = 0; i < 8; i++) { g.fillStyle = Math.random() < 0.25 ? '#e8c070' : '#16161e'; g.fillRect(4 + (i % 4) * 15, 6 + Math.floor(i / 4) * 12, 8, 6); } });
+outside(plane(18, 6, basic({ map: farTex, fog: false, color: 0x8a8a8a }), 4, 3, -36));
+
+// stars
+const starGeo = new THREE.BufferGeometry(); const sp = [];
+for (let i = 0; i < 260; i++) { const a = rnd(-1.2, 1.2), el = rnd(0.12, 1.1), r = 60; sp.push(Math.sin(a) * Math.cos(el) * r + 3, Math.sin(el) * r, -Math.cos(a) * Math.cos(el) * r - 12); }
+starGeo.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
+scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xc8c8e8, size: 1.6, sizeAttenuation: false, fog: false })));
+
 // ---------- lights ----------
 scene.add(new THREE.AmbientLight(0x2a2a52, 1.15));
 const laptopLight = new THREE.PointLight(0x9fd8ff, 1.8, 3.2, 1); laptopLight.position.set(0, 1.05, -1.25); scene.add(laptopLight);
@@ -604,7 +688,10 @@ const rackLight = new THREE.PointLight(0x4a6aff, 1.0, 2.5, 1); rackLight.positio
 const sodiumOffice = new THREE.PointLight(0xff9a40, 2.6, 5, 1); sodiumOffice.position.set(-2.2, 1.6, 0.15); scene.add(sodiumOffice);
 const hallLights = [-0.9, -4.9].map((z) => { const l = new THREE.PointLight(0xd8ecff, 2.4, 6.5, 1); l.position.set(3.5, H - 0.25, z); scene.add(l); return l; });
 hallLights[1].castShadow = true; hallLights[1].shadow.mapSize.set(256, 256); hallLights[1].shadow.bias = -0.003; hallLights[1].shadow.normalBias = 0.03; hallLights[1].shadow.camera.near = 0.1;
-const sodiumHall = new THREE.PointLight(0xff9a40, 3.2, 7, 1); sodiumHall.position.set(3.5, 1.6, -12.2); scene.add(sodiumHall);
+const sodiumHall = new THREE.PointLight(0xff9a40, 1.2, 5, 1); sodiumHall.position.set(3.5, 1.6, -12.2); scene.add(sodiumHall);
+const streetLight = new THREE.PointLight(0xffa048, 16, 18, 1.3); streetLight.position.set(1.75, 4.4, -17.5); scene.add(streetLight);
+streetLight.castShadow = true; streetLight.shadow.mapSize.set(256, 256); streetLight.shadow.bias = -0.004; streetLight.shadow.normalBias = 0.05; streetLight.shadow.camera.near = 0.3;
+const skyFill = new THREE.HemisphereLight(0x1a2050, 0x050403, 0.35); scene.add(skyFill);
 const doorDark = new THREE.PointLight(0x3a2a6a, 0.0, 2, 1); doorDark.position.set(4.6, 1.2, -11.6); scene.add(doorDark);
 
 // shadows
@@ -612,7 +699,8 @@ const noCast = new Set(statics);
 scene.traverse((o) => {
   if (!o.isMesh) return;
   o.receiveShadow = true;
-  o.castShadow = !noCast.has(o) && !o.material.transparent && !(o.geometry.type === 'PlaneGeometry');
+  o.castShadow = !noCast.has(o) && !o.material.transparent && !(o.geometry.type === 'PlaneGeometry') && !o.userData.noShadow;
+  if (o.userData.castOutside) o.castShadow = true;
 });
 figure.traverse((o) => { if (o.isMesh) o.castShadow = false; });
 
